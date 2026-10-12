@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/agentic-sdlc-demo/schemas/vehicle.schema.json",
+  "title": "Synthetic vehicle",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["vehicleId", "modelYear", "make", "model"],
+  "properties": {
+    "vehicleId": {
+      "type": "string",
+      "pattern": "^veh-[a-z0-9-]+$"
+    },
+    "modelYear": {
+      "type": "integer",
+      "minimum": 1900,
+      "maximum": 2100
+    },
+    "make": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 60
+    },
+    "model": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 60
+    },
+    "vehicleDescription": {
+      "type": "string",
+      "maxLength": 500
+    }
+  }
+}

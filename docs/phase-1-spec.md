@@ -1,8 +1,8 @@
-# GitHub Copilot Session Instructions: Progressive Agentic SDLC Demo
+# GitHub Copilot Session Instructions: Agentic SDLC Demo
 
 ## Your role
 
-Act as the lead repository architect and implementation assistant for a customer-facing demonstration named **Progressive Agentic SDLC Demo**.
+Act as the lead repository architect and implementation assistant for a reusable, customer-facing **Agentic SDLC Demo**.
 
 Your job in this session is to initialize a clean repository, inspect and catalog approved public source assets, create a provenance-aware integration plan, and implement the smallest end-to-end claims-processing slice that can support later demonstrations of GitHub Copilot, Microsoft Foundry, Foundry IQ, Azure API Management, API Center, Copilot Studio, evaluation, deployment, and operations.
 
@@ -69,7 +69,7 @@ Use only the following public sources unless the human operator explicitly adds 
 6. Copilot Studio Claim Status Retrieval Agent  
    <https://github.com/jamespaultg/copilot-claim-retrieval-agent>
 
-Do not use internal Microsoft files, internal repositories, private package feeds, customer data, Progressive intellectual property, or information recovered from internal conversations.
+Do not use internal Microsoft files, internal repositories, private package feeds, customer data, customer intellectual property, or information recovered from internal conversations.
 
 ## Non-negotiable governance rules
 
@@ -104,7 +104,7 @@ Before copying or adapting an asset:
 Create this initial structure, adjusting only when there is a concrete technical reason:
 
 ```text
-progressive-agentic-sdlc-demo/
+agentic-sdlc-demo/
 ├── .devcontainer/
 ├── .github/
 │   ├── agents/
@@ -115,19 +115,25 @@ progressive-agentic-sdlc-demo/
 ├── ado/
 │   ├── sample-requirements/
 │   └── work-item-templates/
-├── apps/
-│   ├── claims-handler-ui/
-│   └── claims-api/
-├── agents/
-│   ├── claims-assessor/
-│   ├── policy-checker/
-│   ├── evidence-reviewer/
-│   └── customer-response/
-├── mcp/
-│   └── claims-server/
-├── packages/
-│   ├── claims-domain/
-│   └── claims-contracts/
+├── src/
+│   ├── apps/
+│   │   ├── claims-handler-ui/
+│   │   └── claims-api/
+│   ├── agents/
+│   │   ├── claims-assessor/
+│   │   ├── policy-checker/
+│   │   ├── evidence-reviewer/
+│   │   └── customer-response/
+│   ├── mcp/
+│   │   └── claims-server/
+│   ├── packages/
+│   │   ├── claims-domain/
+│   │   └── claims-contracts/
+│   └── tests/
+│       ├── unit/
+│       ├── integration/
+│       ├── contract/
+│       └── evaluation/
 ├── data/
 │   ├── policies/
 │   ├── claims/
@@ -145,11 +151,6 @@ progressive-agentic-sdlc-demo/
 │   ├── datasets/
 │   ├── evaluators/
 │   └── baselines/
-├── tests/
-│   ├── unit/
-│   ├── integration/
-│   ├── contract/
-│   └── evaluation/
 ├── docs/
 │   ├── architecture.md
 │   ├── demo-script.md
@@ -178,8 +179,8 @@ Use these as preferences, not excuses to invent unsupported configuration:
 
 - GitHub and GitHub Copilot for repository workflow
 - GitHub Actions for CI/CD
-- Azure Developer CLI-compatible orchestration where practical
-- Bicep for Azure infrastructure unless the selected baseline has a compelling, documented alternative
+- Azure Developer CLI (`azd`) for application packaging and deployment orchestration, with a root-level `azure.yaml` describing the selected services
+- Bicep as the infrastructure-as-code driver, with modules under `infrastructure/`
 - Microsoft Foundry Models
 - Microsoft Foundry Agent Service
 - Microsoft Foundry Evaluations
@@ -261,7 +262,7 @@ The model must support these demonstration conditions:
 - Straight-through triage candidate
 - Claim requiring human escalation
 
-These are synthetic demonstration conditions, not representations of Progressive rules.
+These are synthetic demonstration conditions, not representations of any carrier's rules.
 
 Document the model and assumptions in `docs/domain-model.md`.
 

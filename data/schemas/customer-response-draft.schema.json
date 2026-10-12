@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/agentic-sdlc-demo/schemas/customer-response-draft.schema.json",
+  "title": "Synthetic customer response draft",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "draftId",
+    "claimId",
+    "assessmentId",
+    "body",
+    "humanReviewRequired"
+  ],
+  "properties": {
+    "draftId": {
+      "type": "string",
+      "pattern": "^drf-[a-z0-9-]+$"
+    },
+    "claimId": {
+      "type": "string",
+      "pattern": "^clm-[a-z0-9-]+$"
+    },
+    "assessmentId": {
+      "type": "string",
+      "pattern": "^asm-[a-z0-9-]+$"
+    },
+    "body": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 10000
+    },
+    "humanReviewRequired": {
+      "const": true
+    }
+  }
+}

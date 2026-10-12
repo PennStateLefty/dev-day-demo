@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/agentic-sdlc-demo/schemas/customer.schema.json",
+  "title": "Synthetic customer",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["customerId", "displayName"],
+  "properties": {
+    "customerId": {
+      "type": "string",
+      "pattern": "^cust-[a-z0-9-]+$"
+    },
+    "displayName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "A fictional display name only; never use a real person's name."
+    },
+    "preferredContactChannel": {
+      "type": "string",
+      "enum": ["email", "phone", "portal", "none"]
+    }
+  }
+}

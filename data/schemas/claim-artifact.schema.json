@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/agentic-sdlc-demo/schemas/claim-artifact.schema.json",
+  "title": "Synthetic claim artifact",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["artifactId", "claimId", "artifactType", "receivedAt"],
+  "properties": {
+    "artifactId": {
+      "type": "string",
+      "pattern": "^art-[a-z0-9-]+$"
+    },
+    "claimId": {
+      "type": "string",
+      "pattern": "^clm-[a-z0-9-]+$"
+    },
+    "artifactType": {
+      "type": "string",
+      "enum": [
+        "claimant_statement",
+        "policy_document",
+        "repair_estimate",
+        "damage_photo",
+        "police_report",
+        "other"
+      ]
+    },
+    "receivedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "contentRef": {
+      "type": "string",
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]+$",
+      "description": "Repository-relative path to synthetic content; remote URLs and paths outside the repository are not allowed."
+    },
+    "duplicateOfArtifactId": {
+      "type": "string",
+      "pattern": "^art-[a-z0-9-]+$"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 1000
+    }
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/agentic-sdlc-demo/schemas/claim-event.schema.json",
+  "title": "Synthetic claim event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["eventId", "claimId", "eventType", "occurredAt", "actorType"],
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "pattern": "^evt-[a-z0-9-]+$"
+    },
+    "claimId": {
+      "type": "string",
+      "pattern": "^clm-[a-z0-9-]+$"
+    },
+    "eventType": {
+      "type": "string",
+      "enum": [
+        "claim_received",
+        "artifact_received",
+        "assessment_created",
+        "information_requested",
+        "human_review_started",
+        "human_review_completed",
+        "other"
+      ]
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "actorType": {
+      "type": "string",
+      "enum": ["synthetic_customer", "claims_handler", "system"]
+    },
+    "actorId": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "summary": {
+      "type": "string",
+      "maxLength": 1000
+    }
+  }
+}

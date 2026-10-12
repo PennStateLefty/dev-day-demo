@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/agentic-sdlc-demo/schemas/policy.schema.json",
+  "title": "Synthetic policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "policyId",
+    "insuredCustomerId",
+    "status",
+    "effectiveDate",
+    "expirationDate",
+    "coveredVehicleIds",
+    "listedDriverIds",
+    "coverages"
+  ],
+  "properties": {
+    "policyId": {
+      "type": "string",
+      "pattern": "^pol-[a-z0-9-]+$"
+    },
+    "insuredCustomerId": {
+      "type": "string",
+      "pattern": "^cust-[a-z0-9-]+$"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["active", "inactive"]
+    },
+    "effectiveDate": {
+      "type": "string",
+      "format": "date"
+    },
+    "expirationDate": {
+      "type": "string",
+      "format": "date"
+    },
+    "coveredVehicleIds": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^veh-[a-z0-9-]+$"
+      },
+      "uniqueItems": true
+    },
+    "listedDriverIds": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^drv-[a-z0-9-]+$"
+      },
+      "uniqueItems": true
+    },
+    "coverages": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["coverageId", "description"],
+        "properties": {
+          "coverageId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        }
+      }
+    },
+    "exclusions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 2000
+      }
+    },
+    "sourceDocumentRefs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    }
+  }
+}

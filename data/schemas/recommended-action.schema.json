@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/agentic-sdlc-demo/schemas/recommended-action.schema.json",
+  "title": "Recommended human-review action",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "actionId",
+    "actionType",
+    "rationale",
+    "humanReviewRequired"
+  ],
+  "properties": {
+    "actionId": {
+      "type": "string",
+      "pattern": "^act-[a-z0-9-]+$"
+    },
+    "actionType": {
+      "type": "string",
+      "enum": [
+        "request_missing_information",
+        "verify_policy_status",
+        "verify_driver_listing",
+        "review_conflicting_information",
+        "review_repair_estimate",
+        "review_possible_prior_damage",
+        "investigate_possible_duplicate_artifact",
+        "route_to_human_adjuster",
+        "prepare_customer_update"
+      ]
+    },
+    "priority": {
+      "type": "string",
+      "enum": ["low", "normal", "high"]
+    },
+    "rationale": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000
+    },
+    "supportingCitationIds": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^cit-[a-z0-9-]+$"
+      },
+      "uniqueItems": true
+    },
+    "humanReviewRequired": {
+      "const": true
+    }
+  }
+}

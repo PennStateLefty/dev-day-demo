@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/agentic-sdlc-demo/schemas/claim.schema.json",
+  "title": "Synthetic claim",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["claimId"],
+  "properties": {
+    "claimId": {
+      "type": "string",
+      "pattern": "^clm-[a-z0-9-]+$"
+    },
+    "customerId": {
+      "type": "string",
+      "pattern": "^cust-[a-z0-9-]+$",
+      "description": "Optional at intake so missing customer information can be assessed rather than rejected."
+    },
+    "policyId": {
+      "type": "string",
+      "pattern": "^pol-[a-z0-9-]+$",
+      "description": "Optional at intake so a missing policy reference can be reported as an assessment finding."
+    },
+    "vehicleId": {
+      "type": "string",
+      "pattern": "^veh-[a-z0-9-]+$",
+      "description": "Optional at intake so missing vehicle information can be assessed."
+    },
+    "lossDate": {
+      "type": "string",
+      "format": "date",
+      "description": "Optional at intake so missing loss-date information can be assessed."
+    },
+    "reportedDriverId": {
+      "type": "string",
+      "pattern": "^drv-[a-z0-9-]+$",
+      "description": "Optional at intake so missing driver information can be assessed."
+    },
+    "claimantStatement": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 10000,
+      "description": "Optional at intake; absence is a completeness finding."
+    },
+    "artifactIds": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^art-[a-z0-9-]+$"
+      },
+      "uniqueItems": true,
+      "description": "Optional at intake; an absent or empty list can indicate missing evidence."
+    },
+    "repairEstimate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["amount", "currency"],
+      "properties": {
+        "amount": {
+          "type": "number",
+          "minimum": 0
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$"
+        }
+      }
+    }
+  }
+}

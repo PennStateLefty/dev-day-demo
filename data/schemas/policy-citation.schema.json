@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/agentic-sdlc-demo/schemas/policy-citation.schema.json",
+  "title": "Policy citation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "citationId",
+    "policyId",
+    "sourceDocument",
+    "section",
+    "quotedText"
+  ],
+  "properties": {
+    "citationId": {
+      "type": "string",
+      "pattern": "^cit-[a-z0-9-]+$"
+    },
+    "policyId": {
+      "type": "string",
+      "pattern": "^pol-[a-z0-9-]+$"
+    },
+    "sourceDocument": {
+      "type": "string",
+      "minLength": 1
+    },
+    "section": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300
+    },
+    "quotedText": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4000
+    },
+    "page": {
+      "type": "integer",
+      "minimum": 1
+    }
+  }
+}
