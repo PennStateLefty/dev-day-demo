@@ -1,0 +1,33 @@
+{
+  "datasetId": "synthetic-fnol-baseline-v1",
+  "description": "Net-new deterministic regression cases for the demo. These are not source-repository evaluation records and do not represent coverage outcomes.",
+  "cases": [
+    {
+      "caseId": "complete-claim-policy-citation",
+      "claimId": "clm-demo-001",
+      "expectedFindingCodes": [],
+      "requiresPolicyCitation": true,
+      "requiresHumanReview": true
+    },
+    {
+      "caseId": "unlisted-driver-and-estimate-review",
+      "claimId": "clm-demo-002",
+      "expectedFindingCodes": [
+        "driver_not_listed",
+        "repair_estimate_above_review_threshold"
+      ],
+      "requiresPolicyCitation": true,
+      "requiresHumanReview": true
+    },
+    {
+      "caseId": "incomplete-intake",
+      "claimId": "clm-demo-003",
+      "expectedFindingCodes": [
+        "required_information_missing",
+        "required_document_missing"
+      ],
+      "requiresPolicyCitation": false,
+      "requiresHumanReview": true
+    }
+  ]
+}

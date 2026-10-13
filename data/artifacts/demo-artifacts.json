@@ -1,0 +1,16 @@
+[
+  {
+    "artifactId": "art-demo-photo-001",
+    "claimId": "clm-demo-001",
+    "artifactType": "damage_photo",
+    "description": "Synthetic description: visible scrape and dent on the front passenger door; no identity marks or registration details.",
+    "receivedAt": "2024-09-15T12:00:00Z"
+  },
+  {
+    "artifactId": "art-demo-estimate-002",
+    "claimId": "clm-demo-002",
+    "artifactType": "repair_estimate",
+    "description": "Synthetic estimate summary: preliminary body repair estimate of USD 7,200; review required.",
+    "receivedAt": "2024-09-15T12:00:00Z"
+  }
+]

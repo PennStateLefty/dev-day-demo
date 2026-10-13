@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Python lint and tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: '3.12'
+          enable-cache: true
+      - run: uv sync --locked
+      - run: uv run ruff check src/apps/claims-api src/tests
+      - run: uv run pytest -q
+
+  frontend:
+    name: UI build and typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: src/apps/claims-handler-ui/package-lock.json
+      - run: npm ci --prefix src/apps/claims-handler-ui
+      - run: npm run test --prefix src/apps/claims-handler-ui
+      - run: npm run build --prefix src/apps/claims-handler-ui
+
+  infrastructure:
+    name: Bicep build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/cli@v2
+        with:
+          inlineScript: |
+            az bicep install
+            az bicep build --file infrastructure/main.bicep --stdout > /dev/null
+
+  container:
+    name: Container image build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false

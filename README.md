@@ -1,46 +1,63 @@
 # Agentic SDLC Demo
 
-A staged, customer-facing demonstration of an AI-assisted First Notice of Loss (FNOL) workflow for **synthetic automotive claims**. The system is intended to help a human claims handler check completeness, retrieve relevant policy language, identify inconsistencies, recommend next steps, and prepare a customer-response draft for review.
+A reusable demonstration of an AI-assisted First Notice of Loss (FNOL) workflow using **synthetic automotive claims**. The local vertical slice gives a claims handler deterministic completeness and consistency checks, policy citations, and a customer-response draft for review.
 
-## Boundaries
+## Safety boundaries
 
 - This is a demonstration, not an insurance decision system.
-- No agent or application may autonomously approve, deny, settle, or pay a claim.
-- Claims, policyholders, vehicles, policies, and artifacts must be synthetic. Do not add customer data or intellectual property, secrets, credentials, telemetry, or deployment outputs.
-- Policy-grounded assessments must cite their sources; all claim decisions and customer communications stay subject to human review.
-- External assets are limited to the public repositories in `docs/phase-1-spec.md`. No source code or data from those repositories has been copied into this checkpoint.
+- Every assessment requires human review. The system does not approve, deny, settle, pay, or send customer communications.
+- Use only synthetic claims, policies, vehicles, and artifacts. Do not add customer data, credentials, or production telemetry.
+- The review checks are deterministic demonstration rules, not underwriting or risk scoring.
+- The adapted policy is fictional training content and must not be used to make real coverage decisions.
 
-## Proposed architecture
+## Local quickstart
 
-The initial vertical slice is planned, not implemented: a claims-handler UI calls a REST API; both the API and an MCP adapter delegate to one claims application service. Application code, agents, MCP adapters, packages, and tests will live under `src/`; schemas and synthetic data remain under `data/`. The service uses the canonical contracts in `data/schemas/`, a policy-retrieval interface, and configurable model access. Deterministic validation and evaluation surround the service.
+Prerequisites: Python 3.12, [uv](https://docs.astral.sh/uv/), Node.js 22+, and npm.
 
-The first-slice direction is Python/FastAPI with a Foundry hosted orchestrator, prompt-based policy and response specialists, and deterministic validators. Foundry IQ/Azure AI Search provides shared policy grounding; deterministic fixtures support contract tests. Azure packaging will use Azure Developer CLI (`azd`) with a root-level `azure.yaml`; Bicep under `infrastructure/` will define Azure resources. The `azure.yaml` service entries and Bicep modules will be added after the deployment topology is validated.
+Start the API and MCP server:
 
-Identity will use developer credentials locally and managed identity for Azure service-to-service calls. Prefer Entra-authenticated API Management consumers; validate a scoped APIM subscription-key fallback only if the target Copilot Studio tenant requires it. Keys must be managed outside the repository; do not assume tenant sharing.
+```bash
+uv sync --locked
+uv run uvicorn app.main:app --app-dir src/apps/claims-api --reload
+```
 
-## Repository status
+In another terminal, start the handler UI:
 
-This repository is at its presenter-review baseline checkpoint. It contains the Phase 1–2 workspace/source assessment, proposed domain contracts, governance records, a staged repository skeleton, and a decision register with implementation validation gates. No runnable claims application, agent, API, MCP server, infrastructure deployment, or Copilot Studio solution is included yet.
+```bash
+npm ci --prefix src/apps/claims-handler-ui
+npm run dev --prefix src/apps/claims-handler-ui
+```
 
-## Local prerequisites
+Open the Vite URL printed in the terminal (normally `http://localhost:5173`). The API listens at `http://localhost:8000`; its OpenAPI document is at `/docs`, and the MCP endpoint is mounted at `/mcp`.
 
-For this documentation and schema checkpoint:
+The local workflow is deterministic and uses checked-in synthetic fixtures. The optional Foundry integration is isolated behind configuration and has not been exercised against a live Foundry project.
 
-- Git
-- Python 3 (used only for lightweight local JSON checks; no Python application is implemented)
+## Validation
 
-No package installation, Azure subscription, credentials, or model endpoint is required for the current checkpoint. Application runtime prerequisites will be selected and documented before implementation. Azure deployment packaging is planned with `azd` and Bicep; no deployment configuration or cloud resource is implemented yet.
+```bash
+uv run ruff check src/apps/claims-api src/tests
+uv run pytest -q
+npm run test --prefix src/apps/claims-handler-ui
+npm run build --prefix src/apps/claims-handler-ui
+```
 
-## Checkpoint artifacts
+GitHub Actions runs the Python checks, UI typecheck/build, container image build, and Bicep compilation on pushes and pull requests. No Azure login, resource deployment, or live model invocation is part of CI.
 
-- `docs/phase-1-spec.md` — project requirements and staged operating protocol.
-- `docs/source-assessment.md` — assessment of the six approved public sources.
-- `docs/domain-model.md` and `data/schemas/` — initial synthetic claims domain and JSON Schema contracts.
-- `docs/architecture.md`, `docs/threat-model.md`, and `docs/demo-script.md` — checkpoint-level architecture, safety, and demo placeholders for the planned phases.
-- `docs/vertical-slice-plan.md` — proposed, bounded first implementation slice.
-- `docs/open-questions.md` — baseline decisions, implementation validation gates, and current Microsoft guidance.
-- `ASSET-PROVENANCE.md` and `THIRD-PARTY-NOTICES.md` — current reuse ledger and notices.
+## Packaging and infrastructure
 
-## Next checkpoint
+`Dockerfile` builds the React UI and serves its static assets with the FastAPI app. Build locally with `docker build -t synthetic-claims-demo .`, then run with `docker run --rm -p 8000:8000 synthetic-claims-demo`.
 
-Review this baseline with the presenters before implementation begins. The next technical checkpoint is to prove version-pinned specialist invocation, shared knowledge grounding, and the Toolbox/APIM/Copilot Studio MCP path in the target environment. Keep fixtures synthetic and author them independently; resolve asset rights and the root license before external reuse or publication.
+`azure.yaml` points `azd` at the Bicep under `infrastructure/`. The current template defines only an Azure Container Apps managed environment; it does not deploy the application, create a public ingress, configure identity/authentication, or provision Foundry, Search, APIM, or Copilot Studio resources. No Azure resources have been provisioned. Validate the target topology, access controls, region, and cost before extending or deploying it.
+
+## Repository map
+
+- `src/apps/claims-api/` — shared deterministic service, REST API, MCP tools, and local orchestrator.
+- `src/apps/claims-handler-ui/` — React/TypeScript handler experience.
+- `data/` — synthetic claim/artifact fixtures, adapted fictional policy, and JSON Schemas.
+- `evaluations/datasets/` — independently authored baseline cases.
+- `src/tests/` — unit, REST/MCP contract, and evaluation checks.
+- `infrastructure/`, `azure.yaml`, and `Dockerfile` — validation-ready packaging and minimal IaC foundation.
+- `ASSET-PROVENANCE.md`, `THIRD-PARTY-NOTICES.md` — source and license records.
+- `docs/` — phase specification, architecture, threat model, decisions, and demo outline.
+
+The repository currently has no root license. Refer to the provenance and third-party notices before reusing any adapted asset.

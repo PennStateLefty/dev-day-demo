@@ -1,0 +1,28 @@
+{
+  "policyId": "pol-demo-auto",
+  "insuredCustomerId": "cust-demo-one",
+  "status": "active",
+  "effectiveDate": "2024-03-15",
+  "expirationDate": "2025-03-15",
+  "coveredVehicleIds": ["veh-demo-one"],
+  "listedDriverIds": ["drv-demo-one"],
+  "coverages": [
+    {
+      "coverageId": "collision",
+      "description": "Synthetic training wording for collision-related policy retrieval."
+    },
+    {
+      "coverageId": "comprehensive",
+      "description": "Synthetic training wording for non-collision perils, including animal strikes."
+    },
+    {
+      "coverageId": "glass",
+      "description": "Synthetic training wording for repair and replacement of vehicle glass."
+    }
+  ],
+  "exclusions": [
+    "Commercial ride-share or delivery use without the relevant endorsement.",
+    "Racing, intentional damage, wear and tear, mechanical or electrical breakdown, and freezing."
+  ],
+  "sourceDocumentRefs": ["data/policies/demo-auto-policy.md"]
+}

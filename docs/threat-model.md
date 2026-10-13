@@ -1,6 +1,6 @@
 # Initial threat and safety notes
 
-This is a checkpoint-level boundary statement, not a completed production threat model. A detailed threat model is required before deployment or connection to an external system.
+This is a checkpoint-level boundary statement, not a completed production threat model. A detailed threat model is required before deployment or connection to an external system. Current runnable code uses synthetic fixtures only and has no authentication; local-development CORS settings are not a security boundary.
 
 ## Assets and trust boundaries
 
@@ -18,5 +18,7 @@ This is a checkpoint-level boundary statement, not a completed production threat
 | Sensitive or real customer data entering the demo | Use synthetic-only fixtures, avoid contact/identity fields, review logs, and reject real data. |
 | Unauthorized API/MCP use or secret exposure | Select and validate identity/access controls before deployment; never commit credentials. |
 | Tool/retrieval/model timeout or malformed artifact | Define explicit error handling and deterministic failure tests in the implementation phase. |
+
+The Docker image exposes the local demo API and UI but does not add authentication. Do not publish or deploy it to an untrusted network until access control, TLS/ingress, rate limiting, and operational logging requirements are designed and tested. The Bicep template creates only a Container Apps managed environment and does not expose an application endpoint.
 
 No deployed endpoint, model, storage account, or credential exists at this checkpoint.

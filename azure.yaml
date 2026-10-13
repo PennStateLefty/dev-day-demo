@@ -1,0 +1,5 @@
+name: synthetic-claims-demo
+
+infra:
+  provider: bicep
+  path: infrastructure

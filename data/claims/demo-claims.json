@@ -1,0 +1,36 @@
+[
+  {
+    "claimId": "clm-demo-001",
+    "customerId": "cust-demo-one",
+    "policyId": "pol-demo-auto",
+    "vehicleId": "veh-demo-one",
+    "lossDate": "2024-09-12",
+    "reportedDriverId": "drv-demo-one",
+    "claimantStatement": "A deer ran into the side of the vehicle on a rural road. The front passenger door and mirror are damaged.",
+    "artifactIds": ["art-demo-photo-001"],
+    "repairEstimate": {
+      "amount": 3200,
+      "currency": "USD"
+    }
+  },
+  {
+    "claimId": "clm-demo-002",
+    "customerId": "cust-demo-one",
+    "policyId": "pol-demo-auto",
+    "vehicleId": "veh-demo-one",
+    "lossDate": "2024-09-14",
+    "reportedDriverId": "drv-demo-two",
+    "claimantStatement": "A delivery trip ended in a collision. A preliminary repair estimate is attached.",
+    "artifactIds": ["art-demo-estimate-002"],
+    "repairEstimate": {
+      "amount": 7200,
+      "currency": "USD"
+    }
+  },
+  {
+    "claimId": "clm-demo-003",
+    "policyId": "pol-demo-auto",
+    "claimantStatement": "Some damage happened to the vehicle. I am not sure when or what caused it.",
+    "artifactIds": []
+  }
+]

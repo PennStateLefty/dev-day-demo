@@ -2,6 +2,12 @@
 
 This register closes the Phase 1 baseline questions where a reusable default can be selected. It also keeps environment-, rights-holder-, and implementation-dependent checks visible. The register does not authorize importing external assets or deploying Azure resources.
 
+## Implementation checkpoint
+
+The local deterministic baseline is now implemented: shared REST/MCP service, React handler UI, adapted synthetic policy and independently authored claim/evaluation fixtures, Docker packaging, and CI for Python, frontend, container-build, and Bicep checks. `azure.yaml` points to the Bicep template, which currently creates only a Container Apps managed environment with Azure Monitor logging. No cloud resources are deployed, and the app has no authentication; the container is for local synthetic demonstrations only.
+
+The Foundry hooks are configuration-gated and have not been exercised against a live project. Hosted Foundry agents, Foundry IQ/Search, Toolbox/APIM, Copilot Studio, production authentication, and a complete hosted deployment remain unimplemented and must pass the validation gates below before being presented as working integrations.
+
 ## Decisions for the baseline
 
 | Area | Baseline decision |
@@ -24,7 +30,7 @@ This register closes the Phase 1 baseline questions where a reusable default can
 1. **Specialist invocation:** In the target Foundry project, create two prompt-agent versions and prove the hosted orchestrator can call each by explicit version through the supported Python Agent Framework integration. Capture a repeatable evaluation and demonstrate selecting a known-good version.
 2. **Grounding:** Confirm the chosen Foundry IQ/Azure AI Search configuration exposes the intended synthetic policy source and that the assessment preserves valid source references. Test retrieval failure and citation behavior.
 3. **Toolbox, APIM, and Copilot Studio:** Verify the chosen versioned Toolbox endpoint can be exposed or governed as an APIM MCP server and that Copilot Studio's MCP client can connect using the supported Streamable HTTP transport. Exercise inbound authentication in the actual target tenant; verify the scoped API-key fallback only if Entra is unsuitable.
-4. **Deployment topology:** Select the deployable services and hosting targets, then validate the `azure.yaml` service paths, Bicep provider path under `infrastructure/`, parameters, identities, and required permissions against current `azd` and service guidance.
+4. **Deployment topology:** Select the deployable services and hosting targets, then validate the `azure.yaml` service paths, Bicep provider path under `infrastructure/`, parameters, identities, and required permissions against current `azd` and service guidance. Do not expose the unauthenticated demo container to a public network.
 5. **Evaluation and rollback demo:** Choose concrete quality thresholds and the controlled regression only after the evaluation dataset and target Foundry features are available. Prove the full compare, repair or rollback, and passing-regression sequence without real claims or production telemetry.
 6. **Rights and release:** Before external publication or reuse, resolve the root license, the archived Microsoft repository's attribution discrepancy, and file-level rights/synthetic status for every candidate asset. Until then, keep source projects as references and author fixtures independently.
 
