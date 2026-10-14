@@ -4,7 +4,7 @@ import json
 import re
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 
 from jsonschema import Draft202012Validator, FormatChecker
 
@@ -34,6 +34,17 @@ SYNONYMS = {
 STOP_WORDS = {"a", "an", "and", "at", "for", "i", "in", "is", "of", "on", "the", "to", "with"}
 
 
+class ClaimsStore(Protocol):
+    def list_claims(self) -> list[Claim]: ...
+    def find_claim(self, claim_id: str) -> Claim | None: ...
+    def find_policy(self, policy_id: str) -> Policy | None: ...
+    def find_artifact(self, artifact_id: str) -> Artifact | None: ...
+
+
+class PolicyKnowledge(Protocol):
+    def lookup(self, policy_id: str, query: str) -> list[Citation]: ...
+
+
 class DemoServiceError(Exception):
     """Base exception for expected demo-service failures."""
 
@@ -47,9 +58,18 @@ class DemoService:
         self,
         data_root: Path = DATA_ROOT,
         review_threshold_usd: float = DEFAULT_REVIEW_THRESHOLD_USD,
+        *,
+        store: ClaimsStore | None = None,
+        knowledge: PolicyKnowledge | None = None,
     ) -> None:
+        if (store is None) != (knowledge is None):
+            raise ValueError("Cloud data and knowledge must be configured together.")
+        self.store = store
+        self.knowledge = knowledge
         self.data_root = data_root
         self.review_threshold_usd = review_threshold_usd
+        if store is not None:
+            return
         self.claims = {
             claim.claim_id: claim
             for claim in self._load_records("claims/demo-claims.json", "claim.schema.json", Claim)
@@ -92,15 +112,27 @@ class DemoService:
         return path.read_text(encoding="utf-8")
 
     def list_claims(self) -> list[Claim]:
+        if self.store is not None:
+            return self.store.list_claims()
         return list(self.claims.values())
 
     def get_claim(self, claim_id: str) -> Claim:
+        if self.store is not None:
+            claim = self.store.find_claim(claim_id)
+            if claim is None:
+                raise ResourceNotFound(f"Claim '{claim_id}' was not found.")
+            return claim
         try:
             return self.claims[claim_id]
         except KeyError as error:
             raise ResourceNotFound(f"Claim '{claim_id}' was not found.") from error
 
     def get_policy(self, policy_id: str) -> Policy:
+        if self.store is not None:
+            policy = self.store.find_policy(policy_id)
+            if policy is None:
+                raise ResourceNotFound(f"Policy '{policy_id}' was not found.")
+            return policy
         try:
             return self.policies[policy_id]
         except KeyError as error:
@@ -110,6 +142,8 @@ class DemoService:
         policy = self.get_policy(policy_id)
         if not query.strip():
             raise ValueError("Policy lookup query must not be empty.")
+        if self.knowledge is not None:
+            return self.knowledge.lookup(policy_id, query)
 
         sections = re.findall(
             r"^## (.+?)\n(.*?)(?=^## |\Z)",
@@ -180,7 +214,20 @@ class DemoService:
                 )
             )
 
-        policy: Policy | None = self.policies.get(claim.policy_id or "")
+        policy: Policy | None = None
+        if claim.policy_id:
+            try:
+                policy = self.get_policy(claim.policy_id)
+            except ResourceNotFound:
+                pass
+        artifacts = {
+            artifact_id: (
+                self.store.find_artifact(artifact_id)
+                if self.store
+                else self.artifacts.get(artifact_id)
+            )
+            for artifact_id in claim.artifact_ids
+        }
         policy_citations: list[Citation] = []
         policy_basis = "unavailable" if claim.policy_id and policy is None else "not_assessed"
         if policy and claim.loss_date and claim.claimant_statement:
@@ -228,7 +275,7 @@ class DemoService:
             and claim.repair_estimate.amount > self.review_threshold_usd
         ):
             related = [
-                artifact_id for artifact_id in claim.artifact_ids if artifact_id in self.artifacts
+                artifact_id for artifact_id, artifact in artifacts.items() if artifact is not None
             ]
             findings.append(
                 Finding(
@@ -242,7 +289,7 @@ class DemoService:
                 )
             )
         for artifact_id in claim.artifact_ids:
-            artifact = self.artifacts.get(artifact_id)
+            artifact = artifacts.get(artifact_id)
             if artifact and artifact.duplicate_of_artifact_id:
                 findings.append(
                     Finding(

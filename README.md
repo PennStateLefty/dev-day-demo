@@ -35,19 +35,26 @@ The local workflow is deterministic and uses checked-in synthetic fixtures. The 
 ## Validation
 
 ```bash
-uv run ruff check src/apps/claims-api src/tests
+uv run ruff check src/apps/claims-api src/tests scripts
 uv run pytest -q
+uv run python -m unittest discover -s scripts/validation -p 'test_*.py'
 npm run test --prefix src/apps/claims-handler-ui
 npm run build --prefix src/apps/claims-handler-ui
 ```
 
-GitHub Actions runs the Python checks, UI typecheck/build, container image build, and Bicep compilation on pushes and pull requests. No Azure login, resource deployment, or live model invocation is part of CI.
+GitHub Actions runs the Python checks, UI typecheck/build, container image build, Bicep compilation, and compiled infrastructure invariants on pushes and pull requests. No Azure login, resource deployment, or live model invocation is part of CI.
 
 ## Packaging and infrastructure
 
 `Dockerfile` builds the React UI and serves its static assets with the FastAPI app. Build locally with `docker build -t synthetic-claims-demo .`, then run with `docker run --rm -p 8000:8000 synthetic-claims-demo`.
 
-`azure.yaml` points `azd` at the Bicep under `infrastructure/`. The current template defines only an Azure Container Apps managed environment; it does not deploy the application, create a public ingress, configure identity/authentication, or provision Foundry, Search, APIM, or Copilot Studio resources. No Azure resources have been provisioned. Validate the target topology, access controls, region, and cost before extending or deploying it.
+`azure.yaml` points `azd` at subscription-scope Bicep under `infrastructure/`. The platform foundation defines an isolated resource group, Container Apps environment and runtime identity, ACR, monitoring, Entra-only SQL, private Blob containers, Foundry account/project and pinned models, Basic Search, Developer APIM, Free API Center and scoped RBAC. Networking defaults to `enforced-perimeter`; the operator selected explicit `public-demo` mode for portal-driven presentations, retaining identity-only authentication.
+
+`azure.yaml` also declares a remote-built Container Apps service. Its separate Bicep revision template requires the real published image, attaches the runtime managed identity and explicitly enables Azure mode. Postprovision hooks apply relational SQL migrations, synthetic seeds and object-level contained-user grants, then initialize Blob policies and extractive IQ knowledge. Azure mode requires Entra v2 bearer authentication for REST/MCP, reads SQL and retrieves live IQ citations without fixture fallback; local mode remains unchanged.
+
+The hosted UI implements tenant-specific MSAL PKCE sign-in with a separate SPA registration. A plan-first identity initializer can create isolated secretless API/SPA registrations, but never grants consent or caller roles. REST/native MCP gateway routes and bearer policies are declared with the application revision; ARM and runtime validation remain required.
+
+**The Azure foundation is deployed; the complete hosted demo is not finished.** Authenticated direct/APIM readiness and MCP calls, managed-identity SQL reads/append-only notes, cited IQ/Blob retrieval and both pinned model deployments have worked live. Serverless Search failed; only the approved single-unit Basic replacement remains. Portal-driven networking and the current APIM platform-upgrade status are recorded in the deployment guide. Browser sign-in, specialist connections and model gateway integration remain unfinished. Do not expose the unauthenticated **local-mode** container. See [Azure deployment and bill of materials](docs/azure-deployment.md) for evidence and remaining work.
 
 ## Repository map
 
@@ -56,7 +63,7 @@ GitHub Actions runs the Python checks, UI typecheck/build, container image build
 - `data/` — synthetic claim/artifact fixtures, adapted fictional policy, and JSON Schemas.
 - `evaluations/datasets/` — independently authored baseline cases.
 - `src/tests/` — unit, REST/MCP contract, and evaluation checks.
-- `infrastructure/`, `azure.yaml`, and `Dockerfile` — validation-ready packaging and minimal IaC foundation.
+- `infrastructure/`, `azure.yaml`, and `Dockerfile` — local packaging and modular Azure platform foundation.
 - `ASSET-PROVENANCE.md`, `THIRD-PARTY-NOTICES.md` — source and license records.
 - `docs/` — phase specification, architecture, threat model, decisions, and demo outline.
 

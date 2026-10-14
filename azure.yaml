@@ -3,3 +3,31 @@ name: synthetic-claims-demo
 infra:
   provider: bicep
   path: infrastructure
+
+services:
+  claims-api:
+    project: .
+    language: docker
+    host: containerapp
+    module: claims-api
+    resourceGroup: ${AZURE_RESOURCE_GROUP}
+    docker:
+      path: Dockerfile
+      context: .
+      platform: linux/amd64
+      remoteBuild: true
+    hooks:
+      predeploy:
+        shell: sh
+        run: uv run --locked python scripts/validation/azure_preflight.py --configuration-only
+        interactive: false
+
+hooks:
+  postprovision:
+    shell: sh
+    run: uv run --locked python scripts/reconcile_networking.py
+    interactive: false
+  preprovision:
+    shell: sh
+    run: uv run --locked python scripts/validation/azure_preflight.py
+    interactive: false
