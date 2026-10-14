@@ -1,23 +1,25 @@
 import { useEffect, useState } from "react";
-import type { Claim, WorkflowResult } from "./types";
-
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+import type { Assessment, Claim, ResponseDraft, WorkflowResult } from "./types";
+import type { Session } from "./auth";
 
 function describeCode(code: string): string {
   return code.replaceAll("_", " ");
 }
 
-export default function App() {
+export default function App({ session }: { session: Session }) {
   const [claims, setClaims] = useState<Claim[]>([]);
   const [selectedId, setSelectedId] = useState("");
-  const [result, setResult] = useState<WorkflowResult | null>(null);
+  const [result, setResult] = useState<{
+    assessment: Assessment;
+    responseDraft?: ResponseDraft;
+  } | null>(null);
   const [loadingClaims, setLoadingClaims] = useState(true);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch(`${API_BASE}/api/claims`, { signal: controller.signal })
+    session.request("/api/claims", { signal: controller.signal })
       .then(async (response) => {
         if (!response.ok) throw new Error(`Claims request failed (${response.status}).`);
         return (await response.json()) as Claim[];
@@ -32,7 +34,7 @@ export default function App() {
       })
       .finally(() => setLoadingClaims(false));
     return () => controller.abort();
-  }, []);
+  }, [session]);
 
   async function runAssessment() {
     if (!selectedId) return;
@@ -40,14 +42,19 @@ export default function App() {
     setError("");
     setResult(null);
     try {
-      const response = await fetch(`${API_BASE}/api/claims/${selectedId}/workflow`, {
+      const endpoint = session.mode === "local" ? "workflow" : "assess";
+      const response = await session.request(`/api/claims/${selectedId}/${endpoint}`, {
         method: "POST",
       });
       if (!response.ok) {
         const detail = (await response.json()) as { detail?: string };
         throw new Error(detail.detail ?? `Assessment request failed (${response.status}).`);
       }
-      setResult((await response.json()) as WorkflowResult);
+      if (session.mode === "local") {
+        setResult((await response.json()) as WorkflowResult);
+      } else {
+        setResult({ assessment: (await response.json()) as Assessment });
+      }
     } catch (reason: unknown) {
       setError(reason instanceof Error ? reason.message : "Unable to run the assessment.");
     } finally {
@@ -194,12 +201,15 @@ export default function App() {
             )}
           </aside>
 
-          <section className="panel draft" aria-labelledby="draft-heading">
+          {result.responseDraft ? <section className="panel draft" aria-labelledby="draft-heading">
             <p className="eyebrow">04 / Communication</p>
             <h2 id="draft-heading">Customer update draft</h2>
             <p>{result.responseDraft.body}</p>
             <span className="draft-warning">Draft only — human approval required before use.</span>
-          </section>
+          </section> : <section className="notice" role="note">
+            Azure data checks only. Foundry specialists and the Copilot Studio supervisor
+            are not connected here; no customer communication was generated.
+          </section>}
         </div>
       )}
       <footer>All names, IDs, policies, claims, and evidence in this demo are synthetic.</footer>

@@ -6,18 +6,18 @@ This planned customer-neutral, 25-minute narrative connects three presenters thr
 
 | Segment | Presenter focus | Demonstration and handoff |
 |---|---|---|
-| Build and deploy (GitHub Copilot) | Agentic development flow that speeds delivery for developers and QA. | Start from a synthetic requirement. Use Copilot to modify the deterministic validator, add contract/evaluation tests, and run CI. The repository includes a Docker image and a minimal Bicep environment template, but a secure application deployment is gated on validating the hosted topology. Hand off the design and tests to Azure. |
-| Manage and evaluate (Azure / Foundry) | Foundry as the control plane for versioned agents, tools, and knowledge. | Show the hosted orchestrator and its explicitly versioned prompt specialists, publish a prompt change, run evaluations against a fixed synthetic set, and compare results. Select a previously tested version as the rollback only after proving the version-selection path in the target project. Add a synthetic policy/knowledge source to Foundry IQ and rerun evaluation without rewiring agent prompts. Package stable tools—including an assessment operation and an IQ-backed policy-knowledge query—in a versioned Foundry Toolbox and govern its MCP endpoint through API Management. Hand off the governed endpoint to Copilot Studio. |
-| Extend (Copilot Studio) | Copilot Studio as a workflow and capability-extension platform, not a duplicate Foundry agent. | Build a conversational intake/handler flow that gathers missing claim information and invokes the governed MCP capabilities through APIM. Demonstrate both the IQ-backed knowledge query and assessment operation; present the assessment and response draft for human review. Prefer Entra authentication where supported; demonstrate the scoped APIM subscription-key path for a cross-tenant connection only after validating it in the target tenant, without exposing the key. |
+| Build and deploy (GitHub Copilot) | Agentic development flow that speeds delivery for developers and QA. | Start from a synthetic requirement. Use Copilot to modify the deterministic validator, add contract/evaluation tests, and run CI. The repository includes Docker packaging and modular platform Bicep; application deployment/authentication and live validation remain incomplete. Do not present the foundation as a deployed demo. |
+| Manage and evaluate (Azure / Foundry) | Foundry as the control plane for versioned agents, tools, and knowledge. | Show the Claim Assessor, Policy Checker and Communication specialists only after deployment and explicit-version invocation work. Publish a prompt change and evaluate against a fixed synthetic set; prove selecting a tested version before calling it rollback. Ground policy evidence through IQ and govern shared tools through APIM. Risk Analyst remains advisory. Hand off tested endpoints and contracts to Studio. |
+| Extend (Copilot Studio) | Studio owns supervision and capability extension. | Build the supervisor that gathers missing information, invokes governed capabilities and presents results for human review. An optional Claims Data Analyst uses bounded SQL tools, not Fabric or arbitrary generated SQL. Prove cross-tenant Entra connectivity; any authentication fallback requires a compatibility result and explicit decision. |
 
 ## Shared architecture for the demo
 
-- A Foundry hosted orchestrator coordinates explicitly versioned prompt-based policy and response specialists through the Agent Framework Foundry integration.
+- Copilot Studio supervises three explicit-version Foundry specialists: Claim Assessor, Policy Checker and Communication. The local deterministic orchestrator is not the hosted supervisor.
 - Deterministic checks enforce completeness and support contract tests.
 - Foundry IQ/Azure AI Search is a shared knowledge source; agents consume it through a stable connection rather than having the knowledge embedded in each prompt.
 - A versioned Foundry Toolbox/APIM MCP surface exposes the assessment workflow to Copilot Studio; the exact backend/authentication path must be proven in the target tenant.
-- The Copilot Studio flow collects information and presents results; it does not reimplement claim assessment, policy interpretation, or response drafting.
-- The source repository's risk analyst, claimant-history analysis, fraud scoring, and approve/deny outcomes are excluded.
+- Studio collects information and coordinates specialist calls without reimplementing their assessment, interpretation or drafting logic.
+- A newly authored advisory Risk Analyst skill may inspect synthetic consistency/history through bounded tools. Production fraud scoring, risk classification and approve/deny outcomes remain excluded; no upstream code or prompts are imported.
 
 ## Evaluation and operational follow-up
 

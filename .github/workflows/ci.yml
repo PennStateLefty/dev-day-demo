@@ -18,8 +18,9 @@ jobs:
           python-version: '3.12'
           enable-cache: true
       - run: uv sync --locked
-      - run: uv run ruff check src/apps/claims-api src/tests
+      - run: uv run ruff check src/apps/claims-api src/tests scripts
       - run: uv run pytest -q
+      - run: uv run python -m unittest discover -s scripts/validation -p 'test_*.py'
 
   frontend:
     name: UI build and typecheck
@@ -43,8 +44,12 @@ jobs:
       - uses: azure/cli@v2
         with:
           inlineScript: |
+            set -euo pipefail
             az bicep install
-            az bicep build --file infrastructure/main.bicep --stdout > /dev/null
+            az bicep build --file infrastructure/main.bicep --stdout |
+              python3 scripts/validation/check_infrastructure.py
+            az bicep build --file infrastructure/claims-api.bicep --stdout |
+              python3 scripts/validation/check_infrastructure.py --application
 
   container:
     name: Container image build

@@ -1,4 +1,6 @@
 .git
+.azure
+.foundry
 .venv
 __pycache__
 .pytest_cache

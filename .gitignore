@@ -3,6 +3,12 @@
 .env.*
 !.env.example
 *.local
+.azure/*
+!.azure/deployment-plan.md
+.foundry/
+infrastructure/*.json
+!infrastructure/main.parameters.json
+!infrastructure/claims-api.parameters.json
 
 # Language and tooling artifacts
 .venv/
@@ -13,6 +19,7 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.playwright-mcp/
 node_modules/
 dist/
 build/

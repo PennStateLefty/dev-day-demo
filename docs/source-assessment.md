@@ -2,6 +2,11 @@
 
 Reviewed on 2026-10-12. The workspace contained only `docs/phase-1-spec.md`; the sources below are the complete allowlist in that specification. Default-branch commit SHAs, repository metadata, repository-level license files, READMEs, and file trees were checked through GitHub. This is an initial screening, not a legal opinion or a file-by-file rights audit.
 
+The hosted-orchestrator/two-specialist recommendations below are historical.
+The approved [architecture](architecture.md) now uses Copilot Studio supervision,
+three Foundry specialists and a newly authored advisory risk skill. This does not
+alter the source findings, synthetic-data requirements or unresolved reuse rights.
+
 ## Summary and recommendation
 
 **Use `martaldsantos/claims-processing-hack` as the primary technical comparison baseline, not as a codebase to fork or merge wholesale.** It is an unarchived, MIT-licensed, end-to-end educational example spanning document processing, policy matching, API/workflow, MCP, evaluation/observability, and UI. Its content substantially overlaps the archived Microsoft repository, so prefer this one for current comparison and consult the archived source only for historical lineage. Validate individual dependencies, APIs, asset rights, and data syntheticity before reuse. Its repository-level MIT license has a copyright notice naming the maintainer, but the similarly MIT-marked Microsoft upstream carries that same copyright line despite the different repository identity; resolve that provenance discrepancy before reusing upstream material.

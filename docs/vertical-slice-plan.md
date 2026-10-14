@@ -1,5 +1,11 @@
 # Proposed first vertical slice
 
+This is the historical local-slice proposal. Its hosted-orchestrator and
+two-specialist direction is superseded by the approved [architecture](architecture.md):
+Copilot Studio supervision, three Foundry specialists and an advisory risk skill.
+See the current [deployment/BOM](azure-deployment.md) for implemented infrastructure
+and remaining gates; the local deterministic behavior below remains relevant.
+
 ## Goal
 
 Deliver one local, deterministic-first path that assesses a synthetic claim against its linked policy and artifacts, returns a structured result with policy citations, and exposes the same application service through REST and MCP adapters. Keep claim decisions and customer communication under human review.

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environmentName": { "value": "${AZURE_ENV_NAME}" },
+    "location": { "value": "${AZURE_LOCATION}" },
+    "networkMode": { "value": "${AZURE_NETWORK_MODE=enforced-perimeter}" },
+    "operatorIpv4Cidr": { "value": "${AZURE_OPERATOR_IPV4_CIDR=}" },
+    "operatorPrincipalId": { "value": "${AZURE_OPERATOR_PRINCIPAL_ID}" },
+    "sqlAdministratorName": { "value": "${AZURE_SQL_ADMINISTRATOR_NAME}" },
+    "sqlAdministratorType": { "value": "${AZURE_SQL_ADMINISTRATOR_TYPE=User}" },
+    "publisherEmail": { "value": "${AZURE_APIM_PUBLISHER_EMAIL}" },
+    "publisherName": { "value": "${AZURE_APIM_PUBLISHER_NAME}" },
+    "securityExceptionExpiresOn": { "value": "${SECURITY_EXCEPTION_EXPIRES_ON}" },
+    "securityExceptionOwner": { "value": "${SECURITY_EXCEPTION_OWNER}" }
+  }
+}
