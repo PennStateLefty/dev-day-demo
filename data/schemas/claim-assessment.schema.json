@@ -52,6 +52,7 @@
               "driver_not_listed",
               "repair_estimate_above_review_threshold",
               "possible_duplicate_artifact",
+              "possible_policy_exclusion",
               "possible_prior_damage",
               "straight_through_candidate",
               "human_escalation",
@@ -72,6 +73,14 @@
             "items": {
               "type": "string",
               "pattern": "^art-[a-z0-9-]+$"
+            },
+            "uniqueItems": true
+          },
+          "supportingCitationIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^cit-[a-z0-9-]+$"
             },
             "uniqueItems": true
           }

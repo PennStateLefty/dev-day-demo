@@ -7,7 +7,7 @@ import pytest
 from app.database import SqlClaimsStore, connection_string, connector, payload
 from app.knowledge import SearchPolicyKnowledge
 from app.search_rest import KnowledgeError, SearchRestClient
-from app.service import DemoService, ResourceNotFound
+from app.service import DemoService, PolicyEvidenceUnavailable, ResourceNotFound
 from app.settings import Settings
 
 
@@ -115,12 +115,31 @@ def test_cloud_assessment_uses_live_data_and_citations() -> None:
     store.find_claim.return_value = fixtures.get_claim("clm-demo-002")
     store.find_policy.return_value = fixtures.get_policy("pol-demo-auto")
     store.find_artifact.return_value = fixtures.artifacts["art-demo-estimate-002"]
-    knowledge.lookup.return_value = fixtures.lookup_policy("pol-demo-auto", "collision")
+    knowledge.lookup.side_effect = lambda policy_id, query: fixtures.lookup_policy(
+        policy_id, query
+    )
     assessment = DemoService(store=store, knowledge=knowledge).assess_claim("clm-demo-002")
     assert assessment.human_review_required
     assert assessment.policy_basis == "grounded"
+    assert "possible_policy_exclusion" in {
+        finding.finding_code for finding in assessment.completeness_findings
+    }
     store.find_artifact.assert_called_once_with("art-demo-estimate-002")
-    knowledge.lookup.assert_called_once()
+    assert knowledge.lookup.call_count >= 1
+
+
+def test_cloud_exclusion_match_fails_explicitly_without_section_three_evidence() -> None:
+    fixtures = DemoService()
+    store = Mock()
+    knowledge = Mock()
+    claim = fixtures.get_claim("clm-demo-002")
+    store.find_claim.return_value = claim
+    store.find_policy.return_value = fixtures.get_policy("pol-demo-auto")
+    store.find_artifact.return_value = fixtures.artifacts["art-demo-estimate-002"]
+    knowledge.lookup.return_value = []
+
+    with pytest.raises(PolicyEvidenceUnavailable, match="exact Section 3"):
+        DemoService(store=store, knowledge=knowledge).assess_claim(claim.claim_id)
 
 
 def test_search_policy_filter_is_not_caller_controlled() -> None:

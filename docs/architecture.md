@@ -6,7 +6,7 @@ The React/TypeScript handler UI calls a FastAPI REST API. REST and FastMCP tools
 
 The API can serve the built UI from the same origin when the frontend `dist/` directory exists, as in the Docker image. During local development, Vite serves the UI separately and the API allows only the local Vite origins. The container image is multi-stage and includes only the API, runtime dependencies, fixtures, and compiled UI.
 
-The deterministic assessment does not make coverage decisions or assign claimant risk. Checks such as policy dates, listed drivers, missing intake data, estimate threshold, and duplicate artifacts are synthetic demo rules.
+The deterministic assessment does not make coverage decisions or assign claimant risk. Checks such as policy dates, listed drivers, missing intake data, estimate threshold, and duplicate artifacts are synthetic demo rules. It also screens the claimant statement for explicit phrases associated with the synthetic policy's Section 3 exclusions. A possible match includes the exact numbered policy wording as a citation and routes to a human adjuster; it is neither exhaustive policy interpretation nor a coverage conclusion. Attached artifact text is not screened.
 
 ## Intended hosted architecture
 

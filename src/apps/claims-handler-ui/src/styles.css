@@ -283,6 +283,33 @@ button:disabled {
   line-height: 1.45;
 }
 
+.exclusion-evidence {
+  margin-top: 10px;
+  padding: 12px;
+  color: #44516a;
+  background: #f7f9fc;
+  border-left: 3px solid #d6a132;
+  border-radius: 4px;
+}
+
+.exclusion-evidence p {
+  color: inherit;
+}
+
+.exclusion-evidence blockquote {
+  margin: 10px 0 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.exclusion-evidence cite {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-style: normal;
+}
+
 .finding-status {
   min-width: 78px;
   padding: 5px 8px;

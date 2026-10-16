@@ -173,6 +173,28 @@ export default function App({ session }: { session: Session }) {
                     <div>
                       <strong>{describeCode(finding.findingCode)}</strong>
                       <p>{finding.description}</p>
+                      {finding.findingCode === "possible_policy_exclusion" && (
+                        <div className="exclusion-evidence">
+                          <p>
+                            <strong>Claimant statement</strong>
+                            <br />
+                            {selectedClaim?.claimantStatement ?? "Not provided"}
+                          </p>
+                          {finding.supportingCitationIds?.map((citationId) => {
+                            const citation = assessment.policyCitations.find(
+                              (item) => item.citationId === citationId,
+                            );
+                            return citation ? (
+                              <blockquote key={citation.citationId}>
+                                “{citation.quotedText}”
+                                <cite>
+                                  {citation.section} · {citation.sourceDocument}
+                                </cite>
+                              </blockquote>
+                            ) : null;
+                          })}
+                        </div>
+                      )}
                     </div>
                   </li>
                 ))}

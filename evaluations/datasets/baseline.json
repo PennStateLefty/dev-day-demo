@@ -14,6 +14,7 @@
       "claimId": "clm-demo-002",
       "expectedFindingCodes": [
         "driver_not_listed",
+        "possible_policy_exclusion",
         "repair_estimate_above_review_threshold"
       ],
       "requiresPolicyCitation": true,
@@ -26,7 +27,7 @@
         "required_information_missing",
         "required_document_missing"
       ],
-      "requiresPolicyCitation": false,
+      "requiresPolicyCitation": true,
       "requiresHumanReview": true
     }
   ]

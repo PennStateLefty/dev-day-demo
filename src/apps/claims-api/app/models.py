@@ -79,6 +79,7 @@ class Finding(DemoModel):
         "driver_not_listed",
         "repair_estimate_above_review_threshold",
         "possible_duplicate_artifact",
+        "possible_policy_exclusion",
         "possible_prior_damage",
         "straight_through_candidate",
         "human_escalation",
@@ -87,6 +88,7 @@ class Finding(DemoModel):
     status: Literal["clear", "missing", "inconsistent", "needs_review", "unknown"]
     description: str = Field(min_length=1, max_length=2000)
     related_artifact_ids: list[str] = Field(default_factory=list)
+    supporting_citation_ids: list[str] = Field(default_factory=list)
 
 
 class Citation(DemoModel):

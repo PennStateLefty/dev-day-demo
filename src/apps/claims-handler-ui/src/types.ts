@@ -10,6 +10,7 @@ export interface Finding {
   findingCode: string;
   status: "clear" | "missing" | "inconsistent" | "needs_review" | "unknown";
   description: string;
+  supportingCitationIds?: string[];
 }
 
 export interface Citation {

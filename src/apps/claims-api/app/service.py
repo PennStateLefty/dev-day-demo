@@ -30,8 +30,30 @@ SYNONYMS = {
     "crash": "collision",
     "delivery": "commercial",
     "ride-share": "commercial",
+    "rideshare": "commercial",
+    "freeze": "freezing",
+    "froze": "freezing",
 }
 STOP_WORDS = {"a", "an", "and", "at", "for", "i", "in", "is", "of", "on", "the", "to", "with"}
+EXCLUSION_MATCH_PHRASES = {
+    1: ("commercial", "ride share", "rideshare", "delivery"),
+    2: ("racing", "race", "speed contest"),
+    3: (
+        "intentional damage",
+        "deliberate",
+        "deliberately damaged",
+        "intentionally damaged",
+    ),
+    4: ("wear and tear", "mechanical breakdown", "electrical breakdown", "freezing"),
+    5: (
+        "excluded person",
+        "excluded driver",
+        "without a valid license",
+        "no valid license",
+        "unlicensed",
+    ),
+    6: ("custom equipment", "aftermarket equipment", "custom parts"),
+}
 
 
 class ClaimsStore(Protocol):
@@ -47,6 +69,10 @@ class PolicyKnowledge(Protocol):
 
 class DemoServiceError(Exception):
     """Base exception for expected demo-service failures."""
+
+
+class PolicyEvidenceUnavailable(DemoServiceError):
+    """Raised when a possible exclusion cannot be grounded in Section 3 evidence."""
 
 
 class ResourceNotFound(DemoServiceError):
@@ -230,9 +256,9 @@ class DemoService:
         }
         policy_citations: list[Citation] = []
         policy_basis = "unavailable" if claim.policy_id and policy is None else "not_assessed"
-        if policy and claim.loss_date and claim.claimant_statement:
+        if policy and claim.claimant_statement:
             policy_basis = "not_assessed"
-            if (
+            if claim.loss_date and (
                 policy.status != "active"
                 or not policy.effective_date <= claim.loss_date <= policy.expiration_date
             ):
@@ -269,6 +295,47 @@ class DemoService:
             policy_citations = self.lookup_policy(policy.policy_id, claim.claimant_statement)
             if policy_citations:
                 policy_basis = "grounded"
+            exclusion_numbers = self._matching_exclusion_numbers(claim.claimant_statement)
+            if exclusion_numbers:
+                section_citations = [
+                    citation
+                    for citation in policy_citations
+                    if re.match(r"^Section\s+3\b", citation.section, flags=re.IGNORECASE)
+                ]
+                if not section_citations:
+                    section_citations = [
+                        citation
+                        for citation in self.lookup_policy(
+                            policy.policy_id,
+                            "Section 3 Exclusions " + claim.claimant_statement,
+                        )
+                        if re.match(
+                            r"^Section\s+3\b", citation.section, flags=re.IGNORECASE
+                        )
+                    ]
+                if not section_citations:
+                    raise PolicyEvidenceUnavailable(
+                        "A possible exclusion phrase was detected, but exact Section 3 "
+                        "policy evidence could not be retrieved."
+                    )
+
+                exclusion_citations = self._exclusion_citations(
+                    section_citations, exclusion_numbers
+                )
+                policy_citations.extend(citation for _, citation in exclusion_citations)
+                findings.extend(
+                    Finding(
+                        finding_code="possible_policy_exclusion",
+                        status="needs_review",
+                        description=(
+                            f"The claimant statement contains wording that may relate to "
+                            f"Section 3 exclusion {number}; handler review is required. "
+                            "This is not a coverage determination."
+                        ),
+                        supporting_citation_ids=[citation.citation_id],
+                    )
+                    for number, citation in exclusion_citations
+                )
         if (
             claim.repair_estimate
             and claim.repair_estimate.currency == "USD"
@@ -366,6 +433,10 @@ class DemoService:
                 "investigate_possible_duplicate_artifact",
                 "Have a handler compare the flagged artifact with its referenced original.",
             ),
+            "possible_policy_exclusion": (
+                "route_to_human_adjuster",
+                "Have a handler compare the claimant statement with the cited Section 3 wording.",
+            ),
             "other": (
                 "route_to_human_adjuster",
                 "Have a handler resolve the fixture relationship before proceeding.",
@@ -382,10 +453,61 @@ class DemoService:
                     action_id=f"act-review-{index}",
                     action_type=action_type,
                     rationale=rationale,
-                    supporting_citation_ids=[citation.citation_id for citation in citations],
+                    supporting_citation_ids=(
+                        [
+                            citation_id
+                            for citation_id in finding.supporting_citation_ids
+                            if any(
+                                citation.citation_id == citation_id for citation in citations
+                            )
+                        ]
+                        or [citation.citation_id for citation in citations]
+                    ),
                 )
             )
         return actions
+
+    def _matching_exclusion_numbers(self, statement: str) -> list[int]:
+        normalized = " " + " ".join(re.findall(r"[a-z0-9]+", statement.lower())) + " "
+        matches = []
+        for number, phrases in EXCLUSION_MATCH_PHRASES.items():
+            normalized_phrases = (
+                " " + " ".join(re.findall(r"[a-z0-9]+", phrase.lower())) + " "
+                for phrase in phrases
+            )
+            if any(phrase in normalized for phrase in normalized_phrases):
+                matches.append(number)
+        return matches
+
+    def _exclusion_citations(
+        self, section_citations: list[Citation], exclusion_numbers: list[int]
+    ) -> list[tuple[int, Citation]]:
+        for source in section_citations:
+            clauses = {
+                int(match.group(1)): match.group(0).strip()
+                for match in re.finditer(
+                    r"(?ms)^\s*(\d+)\.\s*.+?(?=^\s*\d+\.\s|\Z)",
+                    source.quoted_text,
+                )
+            }
+            if all(number in clauses for number in exclusion_numbers):
+                return [
+                    (
+                        number,
+                        Citation(
+                            citation_id=f"{source.citation_id}-exclusion-{number}",
+                            policy_id=source.policy_id,
+                            source_document=source.source_document,
+                            section=source.section,
+                            quoted_text=clauses[number],
+                        ),
+                    )
+                    for number in exclusion_numbers
+                ]
+        raise PolicyEvidenceUnavailable(
+            "Section 3 was retrieved, but it did not contain the exact wording for each "
+            "possible exclusion."
+        )
 
     def create_response_draft(self, assessment: Assessment) -> dict[str, object]:
         if assessment.triage_recommendation == "request_information":

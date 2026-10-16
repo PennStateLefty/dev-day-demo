@@ -14,6 +14,18 @@ async def test_mcp_assessment_tool_uses_shared_service() -> None:
     assert result.data["claimId"] == "clm-demo-002"
     assert result.data["humanReviewRequired"] is True
     assert result.data["policyCitations"]
+    exclusion = next(
+        finding
+        for finding in result.data["completenessFindings"]
+        if finding["findingCode"] == "possible_policy_exclusion"
+    )
+    citation = next(
+        citation
+        for citation in result.data["policyCitations"]
+        if citation["citationId"] in exclusion["supportingCitationIds"]
+    )
+    assert citation["section"].startswith("Section 3")
+    assert "commercial ride-share or delivery" in citation["quotedText"]
 
 
 @pytest.mark.asyncio

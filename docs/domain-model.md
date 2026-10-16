@@ -12,7 +12,7 @@ This is an initial contract for the demonstration, not an insurance standard or 
 - **Claim event** records a synthetic workflow event.
 - **Policy citation** identifies the source document and location plus the supporting excerpt used by an assessment.
 - **Recommended action** is a bounded next step such as requesting information or routing for human review; it is not a coverage decision.
-- **Claim assessment** contains summary, completeness findings, conflicts, citation state and citations, next actions, and a human-review requirement. A grounded assessment must have at least one policy citation; an unavailable or unassessed policy source must not support a policy conclusion.
+- **Claim assessment** contains summary, completeness findings, conflicts, citation state and citations, next actions, and a human-review requirement. A possible Section 3 exclusion is a deterministic phrase-match indicator on the claimant statement, linked to the exact source clause and routed to a human adjuster. It is not a coverage determination. A grounded assessment must have at least one policy citation; an unavailable or unassessed policy source must not support a policy conclusion.
 - **Customer response draft** references the assessment and is explicitly a draft requiring human review.
 
 ## Demonstration conditions
@@ -36,6 +36,7 @@ The configurable repair review threshold belongs to runtime configuration, not a
 - `humanReviewRequired` is always `true` in a claim assessment and customer response draft.
 - “Straight-through candidate” describes a triage candidate only; it never authorizes approval, denial, settlement, payment, or an unreviewed customer communication.
 - Assessments cite policy sources for policy-grounded statements. A citation is a reference, not a claim that the cited text decides coverage.
+- Exclusion phrase matching is a limited screen, not exhaustive interpretation. A match means only that a handler should compare the statement with the cited wording; a non-match does not mean that coverage applies.
 - Claim, document, model, and tool inputs are untrusted. Prompt-like content in an artifact is data to inspect, never an instruction to follow.
 - The schemas describe structure; deterministic validation, authorization, retrieval quality, and human review must be implemented and tested separately.
 

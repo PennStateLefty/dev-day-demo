@@ -21,7 +21,7 @@ from .auth import EntraAuthMiddleware
 from .models import Assessment, Claim, Policy, WorkflowResult
 from .runtime import Runtime
 from .search_rest import KnowledgeError
-from .service import ResourceNotFound
+from .service import PolicyEvidenceUnavailable, ResourceNotFound
 from .settings import Settings
 
 logger = logging.getLogger(__name__)
@@ -56,7 +56,7 @@ def lookup_policy(
 def assess_synthetic_claim(
     claim_id: Annotated[str, Field(pattern=r"^clm-[a-z0-9-]+$", max_length=100)],
 ) -> dict[str, object]:
-    """Run deterministic review checks and return an assessment requiring human review."""
+    """Screen the claimant statement against Section 3 and return cited flags for human review."""
     try:
         return service.assess_claim(claim_id).model_dump(mode="json", by_alias=True)
     except ResourceNotFound as error:
@@ -138,6 +138,13 @@ async def cloud_dependency_error(request: Request, error: Exception) -> JSONResp
         {"detail": "A required cloud dependency is unavailable; no fixture fallback was used."},
         status_code=503,
     )
+
+
+@app.exception_handler(PolicyEvidenceUnavailable)
+async def policy_evidence_unavailable(
+    request: Request, error: PolicyEvidenceUnavailable
+) -> JSONResponse:
+    return JSONResponse({"detail": str(error)}, status_code=503)
 
 
 @app.get("/health")
