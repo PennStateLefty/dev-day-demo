@@ -3,7 +3,9 @@
     "artifactId": "art-demo-photo-001",
     "claimId": "clm-demo-001",
     "artifactType": "damage_photo",
-    "description": "Synthetic description: visible scrape and dent on the front passenger door; no identity marks or registration details.",
+    "description": "User-provided AI-generated synthetic damage evidence; not a real claimant photograph.",
+    "contentRef": "data/artifacts/images/clm-demo-001/passenger-door.png",
+    "provenance": "user_provided_ai_generated",
     "receivedAt": "2024-09-15T12:00:00Z"
   },
   {
@@ -11,6 +13,24 @@
     "claimId": "clm-demo-002",
     "artifactType": "repair_estimate",
     "description": "Synthetic estimate summary: preliminary body repair estimate of USD 7,200; review required.",
+    "receivedAt": "2024-09-15T12:00:00Z"
+  },
+  {
+    "artifactId": "art-demo-photo-002",
+    "claimId": "clm-demo-002",
+    "artifactType": "damage_photo",
+    "description": "User-provided AI-generated synthetic collision evidence; not a real claimant photograph.",
+    "contentRef": "data/artifacts/images/clm-demo-002/collision.png",
+    "provenance": "user_provided_ai_generated",
+    "receivedAt": "2024-09-15T12:00:00Z"
+  },
+  {
+    "artifactId": "art-demo-photo-004",
+    "claimId": "clm-demo-004",
+    "artifactType": "damage_photo",
+    "description": "User-provided AI-generated synthetic limited-view evidence; not a real claimant photograph.",
+    "contentRef": "data/artifacts/images/clm-demo-004/limited-view.png",
+    "provenance": "user_provided_ai_generated",
     "receivedAt": "2024-09-15T12:00:00Z"
   }
 ]

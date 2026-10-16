@@ -4,6 +4,7 @@ import os
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass
+from urllib.parse import urlparse
 from uuid import UUID
 
 
@@ -19,6 +20,12 @@ class Settings:
     search_endpoint: str = ""
     search_index: str = ""
     ui_client_id: str = ""
+    storage_account: str = ""
+    vision_endpoint: str = ""
+    vision_deployment: str = ""
+    vision_model_version: str = ""
+    foundry_endpoint: str = ""
+    assessor_version: str = ""
 
     @classmethod
     def from_environment(cls, values: Mapping[str, str] | None = None) -> Settings:
@@ -59,6 +66,41 @@ class Settings:
         index = values["AZURE_SEARCH_INDEX"]
         if not re.fullmatch(r"[a-z0-9][a-z0-9-]{1,126}[a-z0-9]", index):
             raise ValueError("Invalid Azure AI Search index name.")
+        storage = values.get("AZURE_STORAGE_ACCOUNT_NAME", "")
+        if storage and not re.fullmatch(r"[a-z0-9]{3,24}", storage):
+            raise ValueError("Invalid evidence storage account name.")
+        vision = tuple(values.get(key, "") for key in (
+            "CLAIMS_VISION_ENDPOINT", "CLAIMS_VISION_DEPLOYMENT", "CLAIMS_VISION_MODEL_VERSION",
+        ))
+        if any(vision) and not all(vision):
+            raise ValueError("Vision endpoint, deployment and model version must be set together.")
+        if any(vision) and not storage:
+            raise ValueError("Live vision requires the private evidence storage account.")
+        if vision[1] and not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}", vision[1]):
+            raise ValueError("Invalid vision deployment identifier.")
+        if vision[2] and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", vision[2]):
+            raise ValueError("Vision requires an explicit dated model version.")
+        if vision[0]:
+            parsed = urlparse(vision[0])
+            if (
+                parsed.scheme != "https" or parsed.username or parsed.password
+                or parsed.query or parsed.fragment or parsed.port
+                or not (parsed.hostname or "").endswith((
+                    ".openai.azure.com", ".services.ai.azure.com", ".azure-api.net",
+                ))
+                or not parsed.path.rstrip("/").endswith("/openai/v1")
+            ):
+                raise ValueError("Vision requires an approved Azure HTTPS /openai/v1 endpoint.")
+        foundry = values.get("FOUNDRY_PROJECT_ENDPOINT", "")
+        version = values.get("CLAIM_ASSESSOR_AGENT_VERSION", "")
+        if bool(foundry) != bool(version):
+            raise ValueError("Foundry project endpoint and explicit agent version are required.")
+        if foundry and not re.fullmatch(
+            r"https://[a-z0-9-]+\.services\.ai\.azure\.com/api/projects/[a-z0-9-]+", foundry,
+        ):
+            raise ValueError("Invalid Foundry project endpoint.")
+        if version and not re.fullmatch(r"[1-9][0-9]*", version):
+            raise ValueError("The Claim Assessor version must be an explicit positive integer.")
         return cls(
             mode=mode,
             tenant_id=tenant,
@@ -70,4 +112,10 @@ class Settings:
             search_endpoint=endpoint,
             search_index=index,
             ui_client_id=ui_client,
+            storage_account=storage,
+            vision_endpoint=vision[0],
+            vision_deployment=vision[1],
+            vision_model_version=vision[2],
+            foundry_endpoint=foundry,
+            assessor_version=version,
         )

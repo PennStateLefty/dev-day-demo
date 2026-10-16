@@ -1,0 +1,15 @@
+{
+  "caseId": "claim-assessor-visible-damage",
+  "claimId": "clm-demo-001",
+  "imageFixture": "data/artifacts/images/clm-demo-001/passenger-door.png",
+  "imageAnalysisOwner": "claims-api",
+  "requiredInvariant": {
+    "humanReviewRequired": true,
+    "triageRecommendationNot": "straight_through_candidate"
+  },
+  "expectedEvidence": [
+    "The registered image is AI-generated synthetic evidence, not a real claimant photograph.",
+    "Claim Assessor receives only the claim ID and evaluates the API-owned image observations.",
+    "Damage observations are advisory, not proof of cause or intent."
+  ]
+}

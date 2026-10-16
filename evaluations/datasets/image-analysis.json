@@ -1,0 +1,28 @@
+{
+  "purpose": "User-supplied semantic expectations; never include in inference prompts.",
+  "cases": [
+    {
+      "claimId": "clm-demo-001",
+      "artifactId": "art-demo-photo-001",
+      "expectedObservation": "A grey car with a large dent and significant scraching on the passenger side door. The mirror cap on the same door is missing",
+      "checks": ["door dent and scratches", "missing mirror cap, not necessarily the entire mirror", "no assertion of cause or timing"]
+    },
+    {
+      "claimId": "clm-demo-002",
+      "artifactId": "art-demo-photo-002",
+      "expectedObservation": "A white small SUV or car with collision accident damage of a bent hood, seen as ajar, and a broken drivers side front bumper cover with black scrapes",
+      "checks": ["bent or ajar hood", "front bumper cover damage and scrapes", "allow orientation uncertainty", "no structural safety diagnosis"]
+    },
+    {
+      "claimId": "clm-demo-004",
+      "artifactId": "art-demo-photo-004",
+      "expectedObservation": "A grey car obscured by an out of focus plant in the foreground. No damage is visible",
+      "checks": ["limited visibility", "no visible damage is not proof of no damage", "do not invent severity"]
+    },
+    {
+      "claimId": "clm-demo-003",
+      "expectedStatus": "no_evidence",
+      "checks": ["no model call", "missing evidence remains explicit"]
+    }
+  ]
+}

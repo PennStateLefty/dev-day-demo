@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dev-day-demo.example/schemas/risk-review.schema.json",
+  "title": "Synthetic claim consistency review",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "claimId",
+    "findings",
+    "limitations",
+    "humanReviewRequired",
+    "recommendation"
+  ],
+  "properties": {
+    "claimId": {
+      "type": "string",
+      "pattern": "^clm-[a-z0-9-]+$"
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "evidence",
+          "reviewQuestion"
+        ],
+        "properties": {
+          "kind": {
+            "enum": [
+              "claim_record_difference",
+              "timeline_context",
+              "prior_claim_context",
+              "insufficient_history"
+            ]
+          },
+          "evidence": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "reviewQuestion": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          }
+        }
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 1000
+      }
+    },
+    "humanReviewRequired": {
+      "const": true
+    },
+    "recommendation": {
+      "const": "human_review"
+    }
+  }
+}

@@ -1,0 +1,191 @@
+{
+  "$defs": {
+    "PartObservation": {
+      "additionalProperties": false,
+      "properties": {
+        "part": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Part",
+          "type": "string"
+        },
+        "damage": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Damage",
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            "minor",
+            "moderate",
+            "severe",
+            "unknown"
+          ],
+          "title": "Severity",
+          "type": "string"
+        }
+      },
+      "required": [
+        "part",
+        "damage",
+        "severity"
+      ],
+      "title": "PartObservation",
+      "type": "object"
+    },
+    "VisionObservations": {
+      "additionalProperties": false,
+      "properties": {
+        "visibility": {
+          "enum": [
+            "clear",
+            "limited",
+            "unusable"
+          ],
+          "title": "Visibility",
+          "type": "string"
+        },
+        "parts": {
+          "items": {
+            "$ref": "#/$defs/PartObservation"
+          },
+          "maxItems": 20,
+          "title": "Parts",
+          "type": "array"
+        },
+        "statementComparison": {
+          "maxLength": 2000,
+          "minLength": 1,
+          "title": "Statementcomparison",
+          "type": "string"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 10,
+          "minItems": 1,
+          "title": "Limitations",
+          "type": "array"
+        }
+      },
+      "required": [
+        "visibility",
+        "parts",
+        "statementComparison",
+        "limitations"
+      ],
+      "title": "VisionObservations",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "status": {
+      "enum": [
+        "completed",
+        "no_evidence",
+        "unavailable"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "artifactIds": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Artifactids",
+      "type": "array"
+    },
+    "inputSha256": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Inputsha256"
+    },
+    "model": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Model"
+    },
+    "modelVersion": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Modelversion"
+    },
+    "deployment": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Deployment"
+    },
+    "promptVersion": {
+      "default": "damage-observations-v1",
+      "title": "Promptversion",
+      "type": "string"
+    },
+    "observations": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/VisionObservations"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "limitation": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Limitation"
+    },
+    "humanReviewRequired": {
+      "const": true,
+      "default": true,
+      "title": "Humanreviewrequired",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "status"
+  ],
+  "title": "ImageAnalysis",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/agentic-sdlc-demo/schemas/image-analysis.schema.json"
+}

@@ -196,6 +196,7 @@ def application_errors(template: dict[str, Any]) -> list[str]:
         "tenantId",
         "apiAudience",
         "apiClientIds",
+        "foundryProjectClientId",
         "uiClientId",
         "runtimeIdentityId",
     ):
@@ -229,6 +230,10 @@ def application_errors(template: dict[str, Any]) -> list[str]:
         errors.append("The deployed application must explicitly use Azure mode.")
     if settings.get("CLAIMS_UI_CLIENT_ID") != "[parameters('uiClientId')]":
         errors.append("Browser authentication must use the explicit SPA client ID.")
+    if settings.get("CLAIMS_API_CLIENT_IDS") != "[variables('authorizedClientIds')]":
+        errors.append("The API must allow its configured callers and Foundry project identity.")
+    if "authorizedClientIds" not in template.get("variables", {}):
+        errors.append("The combined API caller allowlist must be declared explicitly.")
     containers = app.get("properties", {}).get("template", {}).get("containers", [])
     if len(containers) != 1 or containers[0].get("image") != "[parameters('imageName')]":
         errors.append("The revision must use the real azd-published image.")

@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 def to_camel(value: str) -> str:
@@ -69,6 +69,7 @@ class Artifact(DemoModel):
     content_ref: str | None = None
     duplicate_of_artifact_id: str | None = None
     description: str | None = Field(default=None, max_length=1000)
+    provenance: Literal["user_provided_ai_generated"] | None = None
 
 
 class Finding(DemoModel):
@@ -143,6 +144,69 @@ class ResponseDraft(DemoModel):
     human_review_required: Literal[True] = True
 
 
+class PartObservation(DemoModel):
+    part: str = Field(min_length=1, max_length=100)
+    damage: str = Field(min_length=1, max_length=1000)
+    severity: Literal["minor", "moderate", "severe", "unknown"]
+
+
+class VisionObservations(DemoModel):
+    visibility: Literal["clear", "limited", "unusable"]
+    parts: list[PartObservation] = Field(max_length=20)
+    statement_comparison: str = Field(min_length=1, max_length=2000)
+    limitations: list[str] = Field(min_length=1, max_length=10)
+
+
+class ImageAnalysis(DemoModel):
+    status: Literal["completed", "no_evidence", "unavailable"]
+    artifact_ids: list[str] = Field(default_factory=list)
+    input_sha256: str | None = None
+    model: str | None = None
+    model_version: str | None = None
+    deployment: str | None = None
+    prompt_version: str = "damage-observations-v1"
+    observations: VisionObservations | None = None
+    limitation: str | None = None
+    human_review_required: Literal[True] = True
+
+    @model_validator(mode="after")
+    def consistent_status(self) -> ImageAnalysis:
+        if self.status == "completed":
+            if (
+                len(self.artifact_ids) != 1 or self.observations is None
+                or not self.input_sha256 or not self.model or not self.model_version
+                or not self.deployment or self.limitation is not None
+            ):
+                raise ValueError("Completed analysis requires source, model and observations.")
+        elif self.observations is not None or not self.limitation:
+            raise ValueError("Unsuccessful analysis requires a limitation and no observations.")
+        if self.status == "no_evidence" and self.artifact_ids:
+            raise ValueError("No-evidence analysis cannot refer to a photo.")
+        return self
+
+
+class EnrichedAssessment(Assessment):
+    image_analysis: ImageAnalysis
+
+
+class AgentRecommendation(DemoModel):
+    claim_id: str = Field(pattern=r"^clm-[a-z0-9-]+$")
+    summary: str = Field(min_length=1, max_length=4000)
+    triage_recommendation: Literal["request_information", "human_review", "escalate"]
+    recommended_actions: list[str] = Field(min_length=1, max_length=10)
+    supporting_artifact_ids: list[str]
+    supporting_citation_ids: list[str]
+    human_review_required: Literal[True]
+
+
+class HandlerResult(DemoModel):
+    assessment: EnrichedAssessment
+    recommendation: AgentRecommendation
+    agent_name: str
+    agent_version: str
+    response_id: str
+
+
 class WorkflowResult(DemoModel):
-    assessment: Assessment
+    assessment: EnrichedAssessment | Assessment
     response_draft: ResponseDraft

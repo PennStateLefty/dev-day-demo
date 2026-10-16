@@ -21,7 +21,7 @@
     "lossDate": "2024-09-14",
     "reportedDriverId": "drv-demo-two",
     "claimantStatement": "A delivery trip ended in a collision. A preliminary repair estimate is attached.",
-    "artifactIds": ["art-demo-estimate-002"],
+    "artifactIds": ["art-demo-estimate-002", "art-demo-photo-002"],
     "repairEstimate": {
       "amount": 7200,
       "currency": "USD"
@@ -32,5 +32,15 @@
     "policyId": "pol-demo-auto",
     "claimantStatement": "Some damage happened to the vehicle. I am not sure when or what caused it.",
     "artifactIds": []
+  },
+  {
+    "claimId": "clm-demo-004",
+    "customerId": "cust-demo-four",
+    "policyId": "pol-demo-auto",
+    "vehicleId": "veh-demo-one",
+    "lossDate": "2024-09-13",
+    "reportedDriverId": "drv-demo-one",
+    "claimantStatement": "The front passenger door was scratched while the car was parked. The attached photograph was taken through nearby plants.",
+    "artifactIds": ["art-demo-photo-004"]
   }
 ]

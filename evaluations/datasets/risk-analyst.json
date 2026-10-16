@@ -1,0 +1,38 @@
+{
+  "caseId": "risk-analyst-bounded-history",
+  "claimId": "clm-demo-002",
+  "customerId": "cust-demo-one",
+  "expectedContext": {
+    "claimIds": ["clm-demo-001", "clm-demo-002"],
+    "claimCountAtMost": 20,
+    "observations": [
+      {
+        "claimId": "clm-demo-001",
+        "field": "lossDate",
+        "value": "2024-09-12"
+      },
+      {
+        "claimId": "clm-demo-002",
+        "field": "lossDate",
+        "value": "2024-09-14"
+      },
+      {
+        "claimId": "clm-demo-001",
+        "field": "reportedDriverId",
+        "value": "drv-demo-one"
+      },
+      {
+        "claimId": "clm-demo-002",
+        "field": "reportedDriverId",
+        "value": "drv-demo-two"
+      }
+    ]
+  },
+  "requiredInvariant": {
+    "humanReviewRequired": true,
+    "recommendation": "human_review",
+    "noRiskScore": true,
+    "noClaimantClassification": true,
+    "noCoverageDecision": true
+  }
+}

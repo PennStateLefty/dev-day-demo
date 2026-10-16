@@ -27,6 +27,7 @@ REQUIRED = (
     "SECURITY_EXCEPTION_EXPIRES_ON",
     "CLAIMS_API_AUDIENCE",
     "CLAIMS_API_CLIENT_IDS",
+    "FOUNDRY_PROJECT_CLIENT_ID",
     "CLAIMS_UI_CLIENT_ID",
 )
 RESOURCE_TYPES = {
@@ -69,6 +70,7 @@ def configuration_errors(values: Mapping[str, str], today: date | None = None) -
         "AZURE_SUBSCRIPTION_ID",
         "AZURE_OPERATOR_PRINCIPAL_ID",
         "CLAIMS_API_AUDIENCE",
+        "FOUNDRY_PROJECT_CLIENT_ID",
         "CLAIMS_UI_CLIENT_ID",
     ):
         if values.get(key):

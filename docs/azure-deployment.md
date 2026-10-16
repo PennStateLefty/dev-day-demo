@@ -34,6 +34,14 @@ Live public-mode verification on 2026-10-14:
   APIs return 200 with empty lists, and the portal shows no error. This is
   consistent with delayed backend propagation or stale session state; the exact
   cause is not established.
+- Claim Assessor v2 was published to this project using deployment `claims-chat`
+  (`gpt-4.1-mini` is the model name, not the deployment name). Its explicit-version
+  Responses call reached `getClaim` through APIM, which returned 401 because the
+  Foundry client ID was not in the deployed Claims API caller allowlist and did
+  not have the required application role. Both changes were subsequently
+  authorized and applied on 2026-10-16; see the evidence rollout below.
+  Version 1 was an initial immutable version using the model name as a deployment
+  identifier; do not invoke it.
 - External authenticated Blob reads and Search queries succeed. Anonymous Search
   and model requests return 401; Blob returns 409 `PublicAccessNotPermitted`.
   These are authentication/private-container denials, not remaining NSP blocks.
@@ -79,8 +87,11 @@ Actual subscription ARM validation succeeded and the foundation was created.
 No matching policy deny has been demonstrated. Subscription Owner does not imply
 access to parent management-group policy.
 
-Specialist definitions, the advisory skill, browser sign-in and model gateway
-connection/policies remain end-to-end demo work, not platform provisioning blockers.
+The Claim Assessor definition and advisory Risk Analyst Skill/Toolbox publisher are
+source-controlled. Claim Assessor v3 and Risk Analyst Skill v1 are published, but
+tool access and the Risk Analyst Toolbox are not verified. Policy Checker and
+Communication definitions, browser sign-in and model gateway connection/policies
+remain end-to-end demo work, not platform provisioning blockers.
 The serverless provider failure does not prove its root cause was capacity or NSP
 compatibility. Before the approved public-mode change, runtime managed identity
 could list the protected Blob containers, but operator Blob and SQL requests
@@ -94,6 +105,240 @@ The New Foundry model playground currently disables **Save as agent** with
 feature limitation, not a network denial or proof that every agent API is unsupported.
 Resolve target agent-version/region compatibility before claiming specialist readiness.
 
+### Image evidence setup and handler-check runbook
+
+**Deployed on 2026-10-16; agent-driven acceptance remains blocked.** The three
+images are uploaded and byte-verified in private Blob, the five reviewed SQL
+changes are applied, and initializer replay leaves no fixture drift.
+`claims-vision` runs `gpt-6-luna` version `2026-09-22`, GlobalStandard capacity
+10, with `NoAutoUpgrade`. Claim Assessor v3 is published and pinned; the API/UI
+revision uses the existing `claims` project. Foundry Workflows is not used.
+
+Authenticated private previews match the supplied file hashes through both
+direct API and APIM; anonymous requests are denied. Actual API-owned inference
+completed for claims 001, 002 and 004; claim 003 returned `no_evidence` without
+model metadata. Image accuracy is a documented demo limitation, not a release
+gate: the first live
+001 result described scratches and a missing mirror cover but missed the expected
+dent; 002 described bumper scrapes but missed the expected hood misalignment and
+broken cover. The limited-view 004 result correctly abstained from identifying
+damage. Keep these misses visible against the evaluation fixture; do not inject
+the expected answers into model inputs or claim exhaustive damage recognition.
+
+The confirmed outbound caller is the **project managed identity**, not the
+agent instance identity. Its allowed client ID and `Claims.Invoke.Application`
+assignment are deployed. Foundry is still reusing a token issued before that
+grant (2026-10-16 14:57:43 UTC), expiring **2026-10-17 15:02:43 UTC**. Its APIM
+tool calls therefore still return 403 for the missing role claim. Token refresh
+must be observed, not assumed from the Graph assignment. No token bypass or key
+fallback was added. Temporary identity-only denial diagnostics were removed.
+`Run handler checks` returns an explicit 503 while this persists; matching actual
+tool-result extraction and all four agent recommendations remain unverified.
+
+The supplied assets are already in this worktree:
+
+| Claim | Repository path / Blob key inside private `evidence` |
+|---|---|
+| `clm-demo-001` | `data/artifacts/images/clm-demo-001/passenger-door.png` |
+| `clm-demo-002` | `data/artifacts/images/clm-demo-002/collision.png` |
+| `clm-demo-004` | `data/artifacts/images/clm-demo-004/limited-view.png` |
+
+`data/claims/demo-claims.json` supplies `artifactIds`.
+`data/artifacts/demo-artifacts.json` associates each artifact with its claim and
+`contentRef`; the full `contentRef` is the Blob key, not a public URL or SAS.
+Claim 002 retains its estimate and gains a photo. New claim 004 uses a distinct
+synthetic customer; claim 003 keeps no evidence. No further manual JSON work is
+required for these assets. Generator/prompt provenance is unspecified and must
+not be fabricated. User evaluation expectations live only in
+`evaluations/datasets/image-analysis.json`, never in inference prompts.
+
+Local setup uses `uv sync --locked` and the existing UI scripts. Preview endpoints
+read these registered local files; handler checks remain a labeled fixture flow
+and never call a model in local mode. In Azure, preview reads only the private
+Blob container using runtime managed identity. PNG/JPEG evidence is limited to
+5 MiB, 16 million decoded pixels, and one linked photo per assessment.
+
+After selecting/exporting the existing ignored environment configuration, first
+create a **local upload manifest without cloud reads or writes**:
+
+```sh
+uv run --locked python scripts/initialize_evidence.py \
+  --output /tmp/claims-evidence-images.json
+```
+
+`AZURE_STORAGE_ACCOUNT_NAME` must name the existing account. Inspect the three
+Blob keys, byte counts, content types and SHA-256 digests. To include an exact
+expected-before SQL diff, sign in as the existing authorized SQL administrator,
+set `AZURE_SQL_SERVER` and `AZURE_SQL_DATABASE`, and run:
+
+```sh
+uv run --locked python scripts/initialize_evidence.py --include-sql \
+  --output /tmp/claims-evidence-reviewed.json
+```
+
+This is read-only. Existing insert-only `initialize_sql.py` deliberately rejects
+seed drift; do not weaken it or give the API runtime SQL UPDATE access.
+On macOS, if the SQL driver's OpenSSL loader fails despite Homebrew OpenSSL being
+installed, prefix the command with
+`DYLD_LIBRARY_PATH="$(brew --prefix openssl@3)/lib"`; do not disable TLS.
+Review the manifest before explicitly approving/applying the changes:
+
+```sh
+uv run --locked python scripts/initialize_evidence.py \
+  --apply /tmp/claims-evidence-reviewed.json
+```
+
+Apply uploads/compares image bytes before updating references. Existing Blob
+content is never overwritten; differing content fails. SQL uses a transaction,
+fixed parameterized statements, and reviewed before-state checks; concurrent
+drift fails and rolls back. An already-applied matching manifest is replayable.
+SQL failure can leave harmless unreferenced images; it never commits partial SQL
+updates. This operator-local tool uses Azure CLI credentials, not runtime grants.
+
+Cloud inference is opt-in through these application Bicep settings, mirrored
+to environment variables. Empty values keep the feature unconfigured:
+
+| Setting | Meaning |
+|---|---|
+| `CLAIMS_VISION_ENDPOINT` | Approved HTTPS Azure `/openai/v1` endpoint |
+| `CLAIMS_VISION_DEPLOYMENT` | Actual deployment of **gpt-6-luna**, not merely the model name |
+| `CLAIMS_VISION_MODEL_VERSION` | Verified pinned model version `2026-09-22` |
+| `FOUNDRY_PROJECT_ENDPOINT` | Existing project endpoint |
+| `CLAIM_ASSESSOR_AGENT_VERSION` | Explicit version published from the updated claim-ID-only definition |
+
+Set the first three together and the final two together. The API uses its runtime
+managed identity for Blob, model and Foundry calls; there are no API keys or
+automatic fallback models. Azure returned the deployment alias `claims-vision`
+in the live Responses `model` field, not the model/version name. The client
+accepts only the configured alias or exact family/version identifier. Verify the
+alias's actual family, version and `NoAutoUpgrade` through ARM on deployment;
+an alias alone is not per-response proof of the underlying model. Structured
+image responses are verified. The specialist still uses `claims-chat`, not the
+vision deployment.
+If a gateway is used, verify its identity/audience and model routing separately;
+an SDK call alone is not evidence that model traffic traverses APIM.
+
+Repeatable focused infrastructure updates, after selecting the existing
+subscription and resource group:
+
+```sh
+az deployment group create --resource-group "$AZURE_RESOURCE_GROUP" \
+  --template-file infrastructure/claims-vision.bicep \
+  --parameters foundryAccountName="$AZURE_AI_ACCOUNT_NAME"
+az deployment group create --resource-group "$AZURE_RESOURCE_GROUP" \
+  --template-file infrastructure/claims-agent-access.bicep \
+  --parameters foundryAccountName="$AZURE_AI_ACCOUNT_NAME" \
+    runtimePrincipalId="$AZURE_RUNTIME_PRINCIPAL_ID"
+```
+
+The second template grants **Foundry Agent Consumer at project scope** to the
+API runtime. Runtime and operator invocation use the SDK's consumer endpoint
+(`allow_preview=True`, `get_openai_client(agent_name="claim-assessor")`) and
+still send an explicit `agent_reference.version`. A nonexistent version returned
+404, proving this route does not silently select latest. The generic project
+developer Responses endpoint returned 403 for the runtime identity; broader
+authoring rights were not retained. Trial role assignments/custom role were
+removed after this distinction was established.
+
+The project managed identity separately needs the API application's
+`Claims.Invoke.Application` app-role assignment in Entra and the existing
+caller allowlist entry. Inspect `appRoleAssignments` for the project service
+principal before creating an assignment, resolving the API service principal
+and role by their configured application ID and role value. Reuse a matching
+assignment rather than creating duplicates. The live assignment exists; cached
+tokens do not retroactively acquire the role. Do not weaken audience, issuer,
+caller or permission validation while waiting for refresh.
+
+Publish the revised prompt agent using `scripts/agents/claim_assessor.py publish`
+with the existing project endpoint, `--model claims-chat`,
+`--claims-gateway-url "$CLAIMS_GATEWAY_REST_URL"` and
+`--api-audience "api://$CLAIMS_API_AUDIENCE"`. Pin the returned immutable version
+in the ignored environment, then deploy only the intended application update
+after approvals. Reusing an identical source hash reuses its existing version.
+For a direct operator invocation after authentication is configured:
+
+```sh
+uv run --locked python scripts/agents/claim_assessor.py invoke \
+  --project-endpoint "$FOUNDRY_PROJECT_ENDPOINT" \
+  --agent-version "$CLAIM_ASSESSOR_AGENT_VERSION" \
+  --claims-gateway-url "$CLAIMS_GATEWAY_REST_URL" \
+  --api-audience "api://$CLAIMS_API_AUDIENCE" \
+  --claim-id clm-demo-001
+```
+
+The operator requires their own authorized API access. The CLI fetches the claim
+from the API and invokes the same shared handler client, with no image input.
+Actual matching tool evidence must be present in the Foundry response. A missing
+or unsupported tool-output shape fails closed; it does not rerun assessment.
+Re-run this invocation after the cached token has refreshed, then exercise
+claims 001 through 004. Do not call the specialist ready until extraction and
+demo contract and safety checks pass. Exact damage recognition is not required.
+
+If azd's remote build fails while checking an ACR log Blob that does not yet
+exist, inspect the actual ACR run before retrying. The observed run succeeded
+despite azd's log-polling 404. A verified recovery is `az acr build --no-logs`
+with the same Dockerfile/context, followed by
+`azd deploy claims-api --from-package <verified-registry-image@sha256:digest>`.
+This still uses the source-controlled application Bicep and environment settings;
+it is not a portal-only configuration change.
+
+In the UI, selecting a claim fetches its authenticated image without inference.
+**Run handler checks** invokes the API application handler, the pinned agent and
+its enriched `/assess` tool. Local fixture runs are distinct from cloud success.
+Results separate deterministic checks, advisory per-part model observations,
+limitations, and the agent's recommendation. `no_evidence` makes no model call;
+`unavailable` retains checks and requires human review. A limited view must not
+be described as an undamaged vehicle. Re-running incurs fresh inference work;
+automatic model retries are disabled, and exactly-once execution across service
+failures is not promised.
+
+For live acceptance, record asset hashes, model/deployment and prompt versions,
+agent version, actual tool result and final recommendation for all four claims.
+Compare semantic observations with the evaluation dataset, not exact wording.
+Assert no automatic coverage decision, invented citation, hidden-damage diagnosis
+or claimant classification. The full path is not verified until real private
+Blob access, image inference, APIM tool authentication and response extraction
+all succeed.
+
+### Local specialist publisher
+
+The current Claim Assessor definition is published as agent version 3. Its APIM
+tool access remains blocked on a cached pre-grant token despite the authorized
+caller allowlist and API role updates. Risk Analyst Skill v1 was
+published from `agents/risk-analyst/SKILL.md` and read back successfully; the
+downloaded source and digest match the checked-in file. The project currently has
+no connections, so the authenticated APIM MCP project connection required by
+the Risk Analyst Toolbox is not configured and no Toolbox was published.
+
+The current source changes the specialist to **claim-ID-only input** and requires
+an enriched assessment tool result. Do not pin version 2 for the new handler path;
+its old direct-image invocation is no longer the intended flow. Agent v3 appearing
+in Foundry is not evidence that the full handler path has passed.
+
+Publish or verify the standalone Skill without changing project access:
+
+```sh
+uv run --locked python scripts/agents/risk_analyst.py publish-skill \
+  --project-endpoint "$AZURE_AI_PROJECT_ENDPOINT"
+```
+
+After the authenticated APIM MCP project connection has been explicitly
+configured, publish the immutable Toolbox version with that connection:
+
+```sh
+uv run --locked python scripts/agents/risk_analyst.py publish \
+  --project-endpoint "$AZURE_AI_PROJECT_ENDPOINT" \
+  --claims-mcp-url "$CLAIMS_GATEWAY_MCP_URL" \
+  --project-connection-id "$CLAIMS_MCP_PROJECT_CONNECTION_ID"
+```
+
+The returned Toolbox version is invoked through its exact Foundry endpoint:
+`{AZURE_AI_PROJECT_ENDPOINT}/toolboxes/risk-analyst-toolbox/versions/{version}/mcp?api-version=v1`.
+The consumer rejects the default/latest endpoint, verifies the exact version exists,
+loads the Skill through `FoundryToolbox.as_skills_provider()`, and validates the
+review against `data/schemas/risk-review.schema.json`. Invocation still requires
+target-project validation and synthetic regression evidence.
+
 ## Selected bill of materials
 
 All resources default to Central US. A region change requires a new compatibility
@@ -102,8 +347,9 @@ check, not a silent fallback.
 | Component | Selected configuration | Implemented provisioning scope |
 |---|---|---|
 | Foundry | AIServices S0 account, project, system-assigned identities | Yes |
-| Chat/vision model | `gpt-4.1-mini`, `2025-04-14`, GlobalStandard, capacity 10 | Yes; vision behavior still requires synthetic-image testing |
-| Embedding model | `text-embedding-3-small`, version `1`, GlobalStandard, capacity 10 | Yes |
+| Specialist chat model | Deployment `claims-chat`: `gpt-4.1-mini`, `2025-04-14`, GlobalStandard, capacity 10 | Deployed; retained for Claim Assessor |
+| API-owned image model | Selected `gpt-6-luna`; catalog lists `2026-09-22` | Not deployed; endpoint, image inference and access require verification/approval |
+| Embedding model | Deployment `claims-embedding`: `text-embedding-3-small`, version `1`, GlobalStandard, capacity 10 | Yes |
 | Foundry IQ / Search | Basic, one replica and partition; identity authentication | Seeded semantic index and extractive knowledge source/base; live citations resolve to protected Blob |
 | API Management | New classic Developer, one unit, managed identity | REST/native MCP readiness, initialize/list/call and missing-token denial pass; model gateway unfinished |
 | Relational data | SQL Basic, 5 DTU, 2 GB; Entra-only administrator | Migrations, six synthetic records and contained runtime user initialized; live reads and append-only writes pass |
@@ -327,8 +573,10 @@ The hosted UI implements tenant-specific MSAL authorization-code/PKCE sign-in,
 session-storage caching and same-origin authenticated API requests. Public
 `/auth-config` exposes only mode, tenant/client IDs and the delegated scope, never
 credentials. Claims are not fetched until sign-in; configuration/token failures
-are visible and never retry anonymously. Azure mode uses the assessment endpoint,
-not the local fixture workflow, and does not fabricate specialist communication.
+are visible and never retry anonymously. The updated Azure UI uses the application `/workflow` handler to invoke one pinned
+specialist, not Foundry Workflows or the local fixture orchestrator. It does not
+fabricate specialist communication. This source change is deployed, but full
+handler acceptance remains blocked as described above.
 The browser flow has not been exercised against real Entra registrations.
 
 Provisioning no longer implicitly runs local data-plane initialization: an
