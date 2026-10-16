@@ -140,6 +140,15 @@ def test_cloud_exclusion_match_fails_explicitly_without_section_three_evidence()
 
     with pytest.raises(PolicyEvidenceUnavailable, match="exact Section 3"):
         DemoService(store=store, knowledge=knowledge).assess_claim(claim.claim_id)
+    store.find_artifact.side_effect = fixtures.artifacts.get
+    knowledge.lookup.return_value = fixtures.lookup_policy("pol-demo-auto", "collision")
+    assessment = DemoService(store=store, knowledge=knowledge).assess_claim("clm-demo-002")
+    assert assessment.human_review_required
+    assert assessment.policy_basis == "grounded"
+    assert [call.args[0] for call in store.find_artifact.call_args_list] == [
+        "art-demo-estimate-002", "art-demo-photo-002",
+    ]
+    knowledge.lookup.assert_called_once()
 
 
 def test_search_policy_filter_is_not_caller_controlled() -> None:
@@ -239,3 +248,28 @@ def test_azure_mode_requires_complete_identity_and_dependency_configuration() ->
     ):
         with pytest.raises(ValueError):
             Settings.from_environment(invalid)
+
+
+def test_live_vision_and_pinned_handler_configuration_cannot_be_partial_or_arbitrary() -> None:
+    configured = cloud_values() | {
+        "AZURE_STORAGE_ACCOUNT_NAME": "stsyntheticdemo",
+        "CLAIMS_VISION_ENDPOINT": "https://demo.openai.azure.com/openai/v1",
+        "CLAIMS_VISION_DEPLOYMENT": "claims-vision",
+        "CLAIMS_VISION_MODEL_VERSION": "2026-09-22",
+        "FOUNDRY_PROJECT_ENDPOINT": "https://demo.services.ai.azure.com/api/projects/claims",
+        "CLAIM_ASSESSOR_AGENT_VERSION": "3",
+    }
+    assert Settings.from_environment(configured).vision_deployment == "claims-vision"
+    for key in configured.keys() - cloud_values().keys():
+        with pytest.raises(ValueError):
+            Settings.from_environment(
+                {name: value for name, value in configured.items() if name != key}
+            )
+    for override in (
+        {"CLAIMS_VISION_ENDPOINT": "https://attacker.example/openai/v1"},
+        {"CLAIMS_VISION_ENDPOINT": "https://demo.openai.azure.com/openai/v1?secret=value"},
+        {"CLAIMS_VISION_MODEL_VERSION": "latest"},
+        {"CLAIM_ASSESSOR_AGENT_VERSION": "latest"},
+    ):
+        with pytest.raises(ValueError):
+            Settings.from_environment(configured | override)

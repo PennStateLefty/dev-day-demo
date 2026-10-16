@@ -32,6 +32,7 @@ def values() -> dict[str, str]:
         "SECURITY_EXCEPTION_EXPIRES_ON": "2026-12-01",
         "CLAIMS_API_AUDIENCE": "00000000-0000-0000-0000-000000000004",
         "CLAIMS_API_CLIENT_IDS": "00000000-0000-0000-0000-000000000005",
+        "FOUNDRY_PROJECT_CLIENT_ID": "00000000-0000-0000-0000-000000000006",
         "CLAIMS_UI_CLIENT_ID": "00000000-0000-0000-0000-000000000005",
     }
 
@@ -78,6 +79,7 @@ class ConfigurationTests(unittest.TestCase):
             ("AZURE_SQL_ADMINISTRATOR_TYPE", "Owner"),
             ("AZURE_APIM_PUBLISHER_EMAIL", "invalid"),
             ("CLAIMS_API_AUDIENCE", "api://not-a-client-guid"),
+            ("FOUNDRY_PROJECT_CLIENT_ID", "not-a-client-guid"),
             ("CLAIMS_API_CLIENT_IDS", "not-a-client-guid"),
             ("CLAIMS_API_CLIENT_IDS", "00000000-0000-0000-0000-000000000005,"),
         ):

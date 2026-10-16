@@ -29,6 +29,18 @@ async def test_mcp_assessment_tool_uses_shared_service() -> None:
 
 
 @pytest.mark.asyncio
+async def test_mcp_get_synthetic_claim_reads_only_the_requested_record() -> None:
+    async with Client(mcp) as client:
+        result = await client.call_tool(
+            "get_synthetic_claim",
+            {"claim_id": "clm-demo-001"},
+        )
+
+    assert result.data["claimId"] == "clm-demo-001"
+    assert result.data["customerId"] == "cust-demo-one"
+
+
+@pytest.mark.asyncio
 async def test_mcp_policy_lookup_returns_citations() -> None:
     async with Client(mcp) as client:
         result = await client.call_tool(

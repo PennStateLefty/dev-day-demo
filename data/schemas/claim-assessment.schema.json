@@ -18,6 +18,9 @@
     "humanReviewRequired"
   ],
   "properties": {
+    "imageAnalysis": {
+      "$ref": "image-analysis.schema.json"
+    },
     "assessmentId": {
       "type": "string",
       "pattern": "^asm-[a-z0-9-]+$"

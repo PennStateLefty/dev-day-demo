@@ -164,6 +164,24 @@ class DemoService:
         except KeyError as error:
             raise ResourceNotFound(f"Policy '{policy_id}' was not found.") from error
 
+    def get_artifact(self, claim_id: str, artifact_id: str) -> Artifact:
+        claim = self.get_claim(claim_id)
+        if artifact_id not in claim.artifact_ids:
+            raise ResourceNotFound("Artifact is not associated with this claim.")
+        artifact = (
+            self.store.find_artifact(artifact_id)
+            if self.store is not None else self.artifacts.get(artifact_id)
+        )
+        if artifact is None or artifact.claim_id != claim_id:
+            raise ResourceNotFound("Artifact is not associated with this claim.")
+        return artifact
+
+    def list_artifacts(self, claim_id: str) -> list[Artifact]:
+        return [
+            self.get_artifact(claim_id, artifact_id)
+            for artifact_id in self.get_claim(claim_id).artifact_ids
+        ]
+
     def lookup_policy(self, policy_id: str, query: str) -> list[Citation]:
         policy = self.get_policy(policy_id)
         if not query.strip():

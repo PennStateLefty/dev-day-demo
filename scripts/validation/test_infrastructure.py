@@ -208,13 +208,19 @@ class ApplicationTests(unittest.TestCase):
                     "tenantId",
                     "apiAudience",
                     "apiClientIds",
+                    "foundryProjectClientId",
                     "uiClientId",
                     "runtimeIdentityId",
                 )
             },
             "variables": {
+                "authorizedClientIds": (
+                    "[format('{0},{1}', parameters('apiClientIds'), "
+                    "parameters('foundryProjectClientId'))]"
+                ),
                 "runtimeSettings": {
                     "CLAIMS_MODE": "azure",
+                    "CLAIMS_API_CLIENT_IDS": "[variables('authorizedClientIds')]",
                     "CLAIMS_UI_CLIENT_ID": "[parameters('uiClientId')]",
                 }
             },

@@ -13,7 +13,7 @@ def test_claim_list_and_policy_lookup() -> None:
         )
 
     assert claims.status_code == 200
-    assert len(claims.json()) == 3
+    assert len(claims.json()) == 4
     assert citations.status_code == 200
     assert citations.json()[0]["section"].startswith("Section 2.3")
 

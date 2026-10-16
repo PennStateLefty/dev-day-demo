@@ -1,0 +1,66 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "claimId": {
+      "pattern": "^clm-[a-z0-9-]+$",
+      "title": "Claimid",
+      "type": "string"
+    },
+    "summary": {
+      "maxLength": 4000,
+      "minLength": 1,
+      "title": "Summary",
+      "type": "string"
+    },
+    "triageRecommendation": {
+      "enum": [
+        "request_information",
+        "human_review",
+        "escalate"
+      ],
+      "title": "Triagerecommendation",
+      "type": "string"
+    },
+    "recommendedActions": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 10,
+      "minItems": 1,
+      "title": "Recommendedactions",
+      "type": "array"
+    },
+    "supportingArtifactIds": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Supportingartifactids",
+      "type": "array"
+    },
+    "supportingCitationIds": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Supportingcitationids",
+      "type": "array"
+    },
+    "humanReviewRequired": {
+      "const": true,
+      "title": "Humanreviewrequired",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "claimId",
+    "summary",
+    "triageRecommendation",
+    "recommendedActions",
+    "supportingArtifactIds",
+    "supportingCitationIds",
+    "humanReviewRequired"
+  ],
+  "title": "AgentRecommendation",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/agentic-sdlc-demo/schemas/agent-recommendation.schema.json"
+}

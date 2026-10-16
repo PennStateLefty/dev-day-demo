@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
-import type { Assessment, Claim, ResponseDraft, WorkflowResult } from "./types";
+import { useEffect, useRef, useState } from "react";
+import type { Claim, WorkflowResult } from "./types";
 import type { Session } from "./auth";
+import EvidencePreview from "./EvidencePreview";
 
 function describeCode(code: string): string {
   return code.replaceAll("_", " ");
@@ -9,14 +10,13 @@ function describeCode(code: string): string {
 export default function App({ session }: { session: Session }) {
   const [claims, setClaims] = useState<Claim[]>([]);
   const [selectedId, setSelectedId] = useState("");
-  const [result, setResult] = useState<{
-    assessment: Assessment;
-    responseDraft?: ResponseDraft;
-  } | null>(null);
+  const [result, setResult] = useState<WorkflowResult | null>(null);
+  const activeRun = useRef<AbortController | null>(null);
   const [loadingClaims, setLoadingClaims] = useState(true);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState("");
 
+  useEffect(() => () => activeRun.current?.abort(), []);
   useEffect(() => {
     const controller = new AbortController();
     session.request("/api/claims", { signal: controller.signal })
@@ -37,28 +37,32 @@ export default function App({ session }: { session: Session }) {
   }, [session]);
 
   async function runAssessment() {
-    if (!selectedId) return;
+    if (!selectedId || activeRun.current) return;
+    const controller = new AbortController();
+    activeRun.current = controller;
     setRunning(true);
     setError("");
     setResult(null);
     try {
-      const endpoint = session.mode === "local" ? "workflow" : "assess";
-      const response = await session.request(`/api/claims/${selectedId}/${endpoint}`, {
+      const response = await session.request(`/api/claims/${selectedId}/workflow`, {
         method: "POST",
+        signal: controller.signal,
       });
       if (!response.ok) {
         const detail = (await response.json()) as { detail?: string };
         throw new Error(detail.detail ?? `Assessment request failed (${response.status}).`);
       }
-      if (session.mode === "local") {
-        setResult((await response.json()) as WorkflowResult);
-      } else {
-        setResult({ assessment: (await response.json()) as Assessment });
-      }
+      const data = await response.json() as WorkflowResult;
+      if (!controller.signal.aborted) setResult(data);
     } catch (reason: unknown) {
-      setError(reason instanceof Error ? reason.message : "Unable to run the assessment.");
+      if (!controller.signal.aborted) {
+        setError(reason instanceof Error ? reason.message : "Unable to run the assessment.");
+      }
     } finally {
-      setRunning(false);
+      if (activeRun.current === controller) {
+        activeRun.current = null;
+        setRunning(false);
+      }
     }
   }
 
@@ -72,8 +76,7 @@ export default function App({ session }: { session: Session }) {
           <p className="eyebrow">Synthetic FNOL • Handler workspace</p>
           <h1>Claims review</h1>
           <p className="lede">
-            Deterministic intake checks and policy references to support a person reviewing a
-            synthetic claim.
+            Intake checks, advisory image observations, and policy references for human review.
           </p>
         </div>
         <span className="environment-badge">DEMO DATA ONLY</span>
@@ -102,8 +105,12 @@ export default function App({ session }: { session: Session }) {
               id="claim-select"
               value={selectedId}
               onChange={(event) => {
+                activeRun.current?.abort();
+                activeRun.current = null;
                 setSelectedId(event.target.value);
                 setResult(null);
+                setError("");
+                setRunning(false);
               }}
               disabled={!claims.length}
             >
@@ -135,6 +142,7 @@ export default function App({ session }: { session: Session }) {
             </div>
           </dl>
         )}
+        {selectedClaim && <EvidencePreview key={selectedId} session={session} claimId={selectedId} />}
       </section>
 
       {error && (
@@ -202,6 +210,33 @@ export default function App({ session }: { session: Session }) {
             ) : (
               <p className="muted">No deterministic review flags were raised.</p>
             )}
+            {assessment.imageAnalysis && <section aria-label="Model image observations">
+              <h3>Model image observations — advisory</h3>
+              <p>Status: {describeCode(assessment.imageAnalysis.status)}</p>
+              {assessment.imageAnalysis.limitation && <p role="status">
+                {assessment.imageAnalysis.limitation}
+              </p>}
+              {assessment.imageAnalysis.observations && <>
+                <p>Visibility: {assessment.imageAnalysis.observations.visibility}</p>
+                <ul>{assessment.imageAnalysis.observations.parts.map((part, index) =>
+                  <li key={`${part.part}-${index}`}>
+                    <strong>{part.part}</strong>: {part.damage} (visible severity: {part.severity})
+                  </li>)}</ul>
+                <p>{assessment.imageAnalysis.observations.statementComparison}</p>
+                <ul>{assessment.imageAnalysis.observations.limitations.map((limitation, index) =>
+                  <li key={index}>{limitation}</li>)}</ul>
+                <small>{assessment.imageAnalysis.model} · {assessment.imageAnalysis.modelVersion}
+                  {" · "}{assessment.imageAnalysis.artifactIds.join(", ")}</small>
+              </>}
+            </section>}
+            {result.recommendation && <section aria-label="Agent recommendation">
+              <h3>Claim Assessor recommendation — human review required</h3>
+              <p>{result.recommendation.summary}</p>
+              <p>{describeCode(result.recommendation.triageRecommendation)}</p>
+              <ul>{result.recommendation.recommendedActions.map((action, index) =>
+                <li key={index}>{action}</li>)}</ul>
+              <small>{result.agentName} · version {result.agentVersion}</small>
+            </section>}
           </section>
 
           <aside className="panel" aria-labelledby="evidence-heading">
@@ -229,8 +264,8 @@ export default function App({ session }: { session: Session }) {
             <p>{result.responseDraft.body}</p>
             <span className="draft-warning">Draft only — human approval required before use.</span>
           </section> : <section className="notice" role="note">
-            Azure data checks only. Foundry specialists and the Copilot Studio supervisor
-            are not connected here; no customer communication was generated.
+            Advisory handler checks only. No customer communication was generated.
+            The Copilot Studio supervisor is not invoked by this screen.
           </section>}
         </div>
       )}

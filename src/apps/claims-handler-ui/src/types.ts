@@ -6,6 +6,34 @@ export interface Claim {
   repairEstimate?: { amount: number; currency: string };
 }
 
+export interface Artifact {
+  artifactId: string;
+  artifactType: string;
+  description?: string;
+}
+
+export interface ImageAnalysis {
+  status: "completed" | "no_evidence" | "unavailable";
+  artifactIds: string[];
+  model?: string;
+  modelVersion?: string;
+  inputSha256?: string;
+  limitation?: string;
+  observations?: {
+    visibility: "clear" | "limited" | "unusable";
+    parts: { part: string; damage: string; severity: string }[];
+    statementComparison: string;
+    limitations: string[];
+  };
+}
+
+export interface Recommendation {
+  summary: string;
+  triageRecommendation: "request_information" | "human_review" | "escalate";
+  recommendedActions: string[];
+  humanReviewRequired: true;
+}
+
 export interface Finding {
   findingCode: string;
   status: "clear" | "missing" | "inconsistent" | "needs_review" | "unknown";
@@ -29,6 +57,7 @@ export interface Assessment {
   policyBasis: "grounded" | "unavailable" | "not_assessed";
   triageRecommendation: string;
   humanReviewRequired: true;
+  imageAnalysis?: ImageAnalysis;
 }
 
 export interface ResponseDraft {
@@ -38,5 +67,8 @@ export interface ResponseDraft {
 
 export interface WorkflowResult {
   assessment: Assessment;
-  responseDraft: ResponseDraft;
+  responseDraft?: ResponseDraft;
+  recommendation?: Recommendation;
+  agentName?: string;
+  agentVersion?: string;
 }

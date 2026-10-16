@@ -12,13 +12,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastmcp import FastMCP
 from mssql_python import Error as SqlError
-from pydantic import Field
+from openai import APIError
+from PIL import Image, UnidentifiedImageError
+from pydantic import Field, ValidationError
 from starlette.requests import Request
-from starlette.responses import JSONResponse
+from starlette.responses import JSONResponse, Response
 
 from .agents import LocalDemoOrchestrator
 from .auth import EntraAuthMiddleware
-from .models import Assessment, Claim, Policy, WorkflowResult
+from .evidence import validate_image
+from .handler import HandlerError
+from .models import Artifact, Claim, EnrichedAssessment, HandlerResult, Policy, WorkflowResult
 from .runtime import Runtime
 from .search_rest import KnowledgeError
 from .service import PolicyEvidenceUnavailable, ResourceNotFound
@@ -56,9 +60,20 @@ def lookup_policy(
 def assess_synthetic_claim(
     claim_id: Annotated[str, Field(pattern=r"^clm-[a-z0-9-]+$", max_length=100)],
 ) -> dict[str, object]:
-    """Screen the claimant statement against Section 3 and return cited flags for human review."""
+    """Return deterministic checks and separate API-owned image observations for human review."""
     try:
-        return service.assess_claim(claim_id).model_dump(mode="json", by_alias=True)
+        return runtime.evidence.assess(service, claim_id).model_dump(mode="json", by_alias=True)
+    except ResourceNotFound as error:
+        raise ValueError(str(error)) from error
+
+
+@mcp.tool
+def get_synthetic_claim(
+    claim_id: Annotated[str, Field(pattern=r"^clm-[a-z0-9-]+$", max_length=100)],
+) -> dict[str, object]:
+    """Read one synthetic claim to ground bounded review and history lookups."""
+    try:
+        return service.get_claim(claim_id).model_dump(mode="json", by_alias=True)
     except ResourceNotFound as error:
         raise ValueError(str(error)) from error
 
@@ -191,6 +206,37 @@ def get_claim(claim_id: str) -> Claim:
         raise HTTPException(status_code=404, detail=str(error)) from error
 
 
+@app.get("/api/claims/{claim_id}/artifacts", response_model=list[Artifact])
+def list_artifacts(claim_id: str) -> list[Artifact]:
+    try:
+        return service.list_artifacts(claim_id)
+    except ResourceNotFound as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@app.get("/api/claims/{claim_id}/artifacts/{artifact_id}/content")
+def artifact_content(claim_id: str, artifact_id: str) -> Response:
+    try:
+        artifact = service.get_artifact(claim_id, artifact_id)
+        if artifact.artifact_type != "damage_photo":
+            raise ResourceNotFound("Artifact is not an image.")
+        reader = runtime.evidence.reader
+        if reader is None:
+            raise HTTPException(status_code=503, detail="Evidence storage is not configured.")
+        content = reader.read(artifact)
+        return Response(content, media_type=validate_image(content), headers={
+            "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff",
+        })
+    except ResourceNotFound as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except (
+        OSError, ValueError, UnidentifiedImageError,
+        Image.DecompressionBombError, Image.DecompressionBombWarning,
+    ) as error:
+        logger.warning("Evidence preview unavailable (%s)", type(error).__name__)
+        raise HTTPException(status_code=503, detail="Evidence image is unavailable.") from error
+
+
 @app.get("/api/policies/{policy_id}", response_model=Policy)
 def get_policy(policy_id: str) -> Policy:
     try:
@@ -213,25 +259,36 @@ def lookup_policy_endpoint(
         raise HTTPException(status_code=404, detail=str(error)) from error
 
 
-@app.post("/api/claims/{claim_id}/assess", response_model=Assessment)
-def assess_claim(claim_id: str) -> Assessment:
+@app.post("/api/claims/{claim_id}/assess", response_model=EnrichedAssessment)
+def assess_claim(claim_id: str) -> EnrichedAssessment:
     try:
-        return service.assess_claim(claim_id)
+        return runtime.evidence.assess(service, claim_id)
     except ResourceNotFound as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
 
 
-@app.post("/api/claims/{claim_id}/workflow", response_model=WorkflowResult)
-def run_workflow(claim_id: str) -> WorkflowResult:
-    if settings.mode != "local":
-        raise HTTPException(
-            status_code=409,
-            detail="The fixture workflow is local-only; use the versioned Foundry specialists.",
-        )
+@app.post("/api/claims/{claim_id}/workflow", response_model=WorkflowResult | HandlerResult)
+def run_workflow(claim_id: str) -> WorkflowResult | HandlerResult:
     try:
-        return LocalDemoOrchestrator(service).run(claim_id)
+        claim = service.get_claim(claim_id)
+        if settings.mode == "local":
+            result = LocalDemoOrchestrator(service).run(claim_id)
+            return WorkflowResult(
+                assessment=runtime.evidence.assess(service, claim_id),
+                response_draft=result.response_draft,
+            )
+        if runtime.handler is None:
+            raise HTTPException(status_code=409, detail=(
+                "Pinned Claim Assessor is not configured; no fixture fallback was used."
+            ))
+        return runtime.handler.run(claim)
     except ResourceNotFound as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
+    except (HandlerError, APIError, ValidationError, ValueError) as error:
+        logger.error("Agent handler failed (%s)", type(error).__name__)
+        raise HTTPException(status_code=503, detail=(
+            "Pinned agent result could not be verified; no fixture fallback was used."
+        )) from error
 
 
 ui_dist = Path(__file__).resolve().parents[4] / "src/apps/claims-handler-ui/dist"
