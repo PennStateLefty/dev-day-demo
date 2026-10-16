@@ -110,4 +110,8 @@ class SqlClaimsStore:
 
 
 def payload(record: Claim | Policy | Artifact) -> str:
-    return json.dumps(record.model_dump(mode="json", by_alias=True), sort_keys=True)
+    data = record.model_dump(mode="json", by_alias=True)
+    if isinstance(record, Artifact) and record.provenance is None:
+        # Preserve existing seed payloads when optional provenance was never supplied.
+        data.pop("provenance", None)
+    return json.dumps(data, sort_keys=True)

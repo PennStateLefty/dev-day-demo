@@ -13,12 +13,18 @@
     "tenantId": { "value": "${AZURE_TENANT_ID}" },
     "apiAudience": { "value": "${CLAIMS_API_AUDIENCE}" },
     "apiClientIds": { "value": "${CLAIMS_API_CLIENT_IDS}" },
+    "foundryProjectClientId": { "value": "${FOUNDRY_PROJECT_CLIENT_ID}" },
     "uiClientId": { "value": "${CLAIMS_UI_CLIENT_ID}" },
     "sqlServer": { "value": "${AZURE_SQL_SERVER}" },
     "sqlDatabase": { "value": "${AZURE_SQL_DATABASE}" },
     "searchEndpoint": { "value": "${AZURE_SEARCH_ENDPOINT}" },
     "searchIndex": { "value": "${AZURE_SEARCH_INDEX}" },
     "storageAccountName": { "value": "${AZURE_STORAGE_ACCOUNT_NAME}" },
-    "gatewayName": { "value": "${AZURE_APIM_NAME}" }
+    "gatewayName": { "value": "${AZURE_APIM_NAME}" },
+    "visionEndpoint": { "value": "${CLAIMS_VISION_ENDPOINT=}" },
+    "visionDeployment": { "value": "${CLAIMS_VISION_DEPLOYMENT=}" },
+    "visionModelVersion": { "value": "${CLAIMS_VISION_MODEL_VERSION=}" },
+    "foundryProjectEndpoint": { "value": "${FOUNDRY_PROJECT_ENDPOINT=}" },
+    "claimAssessorVersion": { "value": "${CLAIM_ASSESSOR_AGENT_VERSION=}" }
   }
 }

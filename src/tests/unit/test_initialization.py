@@ -6,6 +6,7 @@ from unittest.mock import Mock
 
 import httpx
 import pytest
+from app.database import payload
 from app.search_rest import KnowledgeError, SearchRestClient
 from app.service import DemoService
 from initialize_knowledge import (
@@ -51,7 +52,7 @@ def test_initial_sql_seed_commits_in_relational_dependency_order() -> None:
     cursor = connection.cursor.return_value
     cursor.fetchall.return_value = []
     result = initialize(lambda: connection, "00000000-0000-0000-0000-000000000001", DemoService())
-    assert result == {"passed": True, "migrations_applied": 2, "records_inserted": 6}
+    assert result == {"passed": True, "migrations_applied": 2, "records_inserted": 9}
     calls = [call.args[0] for call in cursor.execute.call_args_list]
     policy = next(i for i, sql in enumerate(calls) if sql.startswith("INSERT claims.Policy"))
     claim = next(i for i, sql in enumerate(calls) if sql.startswith("INSERT claims.Claim"))
@@ -73,7 +74,7 @@ def test_sql_redeployment_does_not_reinsert_or_reapply() -> None:
             cursor.fetchall.return_value = [(hashlib.sha256(content).hexdigest(),)]
         elif sql.startswith("SELECT payload"):
             model = {**fixtures.policies, **fixtures.claims, **fixtures.artifacts}[params[0]]
-            cursor.fetchall.return_value = [(model.model_dump_json(by_alias=True),)]
+            cursor.fetchall.return_value = [(payload(model),)]
         else:
             cursor.fetchall.return_value = []
 

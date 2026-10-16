@@ -18,6 +18,19 @@ The commit and license information records the reviewed default-branch revision 
 
 The user confirmed rights-holder permission for selected files in the two repositories that have no repository license. That confirmation is not an upstream license finding. No candidate files from those repositories were imported because the inspected claim datasets contain personal-looking names/contact fields or refer to linked claimant/lakehouse data, and the risk-oriented fields/workflows are outside the approved demo scope. Reassess a specific file only after its permission scope and synthetic status are verified.
 
-## Required record for future reuse
+## User-supplied synthetic image evidence
+
+The user supplied these generated images for this synthetic demonstration and
+authorized their use and Azure upload. They were not copied from the external
+repositories above. Generator, generation prompt and third-party license terms
+were not supplied; do not invent that provenance or imply a broader license.
+
+| Local asset | Use |
+|---|---|
+| `data/artifacts/images/clm-demo-001/passenger-door.png` | Synthetic door and mirror evidence for claim 001 |
+| `data/artifacts/images/clm-demo-002/collision.png` | Synthetic front-corner damage evidence for claim 002 |
+| `data/artifacts/images/clm-demo-004/limited-view.png` | Synthetic obscured-view evidence for claim 004 |
+
+## Required record for future external reuse
 
 For each copied or adapted asset, add a separate row containing its repository URL, immutable commit SHA, asset license or documented permission basis, original path, local destination, and specific modification. Preserve required copyright/license text in the destination and add required notices to `THIRD-PARTY-NOTICES.md`. A planning assumption is not a substitute for license terms; for sources without a repository license, record the specific rights-holder permission and scope without describing the repository as MIT licensed.
