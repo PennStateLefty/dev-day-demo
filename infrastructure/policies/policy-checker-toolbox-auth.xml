@@ -1,0 +1,27 @@
+<policies>
+  <inbound>
+    <base />
+    <validate-jwt header-name="Authorization" require-scheme="Bearer" require-expiration-time="true" require-signed-tokens="true" failed-validation-httpcode="401" failed-validation-error-message="A valid bearer token from the demo tenant is required.">
+      <openid-config url="https://login.microsoftonline.com/__TENANT__/v2.0/.well-known/openid-configuration" />
+      <issuers>
+        <issuer>https://login.microsoftonline.com/__TENANT__/v2.0</issuer>
+        <issuer>https://sts.windows.net/__TENANT__/</issuer>
+      </issuers>
+      <required-claims>
+        <claim name="tid" match="all"><value>__TENANT__</value></claim>
+      </required-claims>
+    </validate-jwt>
+    <set-query-parameter name="api-version" exists-action="override">
+      <value>v1</value>
+    </set-query-parameter>
+    <authentication-managed-identity resource="https://ai.azure.com" />
+    <set-header name="x-correlation-id" exists-action="override">
+      <value>@(context.RequestId.ToString())</value>
+    </set-header>
+  </inbound>
+  <backend>
+    <forward-request buffer-response="false" timeout="120" />
+  </backend>
+  <outbound><base /></outbound>
+  <on-error><base /></on-error>
+</policies>

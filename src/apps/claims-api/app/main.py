@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated
@@ -13,6 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from fastmcp import FastMCP
 from mssql_python import Error as SqlError
 from openai import APIError
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from PIL import Image, UnidentifiedImageError
 from pydantic import Field, ValidationError
 from starlette.requests import Request
@@ -27,8 +29,10 @@ from .runtime import Runtime
 from .search_rest import KnowledgeError
 from .service import ResourceNotFound
 from .settings import Settings
+from .telemetry import configure_telemetry
 
 logger = logging.getLogger(__name__)
+telemetry_enabled = configure_telemetry()
 settings = Settings.from_environment()
 runtime = Runtime(settings)
 service = runtime.service
@@ -139,8 +143,10 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
     allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type"],
+    allow_headers=["Content-Type", "traceparent", "tracestate"],
 )
+if telemetry_enabled:
+    FastAPIInstrumentor.instrument_app(app, excluded_urls="/health")
 
 
 @app.exception_handler(AzureError)
@@ -172,6 +178,17 @@ def auth_config() -> JSONResponse:
             }
         )
     return JSONResponse(configuration, headers={"Cache-Control": "no-store"})
+
+
+@app.get("/telemetry-config")
+def telemetry_config() -> JSONResponse:
+    connection_string = (
+        os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING", "") if settings.mode == "azure" else ""
+    )
+    return JSONResponse(
+        {"connectionString": connection_string},
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 @app.get("/ready")
@@ -278,7 +295,13 @@ def run_workflow(claim_id: str) -> WorkflowResult | HandlerResult:
     except ResourceNotFound as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     except (HandlerError, APIError, ValidationError, ValueError) as error:
-        logger.error("Agent handler failed (%s)", type(error).__name__)
+        if isinstance(error, HandlerError):
+            logger.exception("Pinned agent validation failed: %s", error)
+        else:
+            logger.error(
+                "Agent handler failed (%s)", type(error).__name__,
+                extra={"upstream_request_id": getattr(error, "request_id", None)},
+            )
         raise HTTPException(status_code=503, detail=(
             "Pinned agent result could not be verified; no fixture fallback was used."
         )) from error

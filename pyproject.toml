@@ -6,6 +6,7 @@ requires-python = ">=3.12,<3.14"
 dependencies = [
     "azure-ai-projects>=2.0.0b2,<3",
     "azure-identity>=1.25,<2",
+    "azure-monitor-opentelemetry>=1.8.10,<2",
     "azure-search-documents>=11.6,<12",
     "azure-storage-blob>=12.26,<13",
     "fastapi>=0.116,<1",
@@ -14,6 +15,8 @@ dependencies = [
     "jsonschema[format]>=4.23,<5",
     "mssql-python>=1,<2",
     "openai>=2,<3",
+    "opentelemetry-instrumentation-fastapi>=0.60b0,<1",
+    "opentelemetry-instrumentation-httpx>=0.60b0,<1",
     "pillow>=11,<13",
     "pydantic>=2.11,<3",
     "PyJWT[crypto]>=2.10,<3",
@@ -32,7 +35,7 @@ dev = [
 [tool.pytest.ini_options]
 testpaths = ["src/tests"]
 asyncio_mode = "auto"
-pythonpath = ["src/apps/claims-api", "scripts"]
+pythonpath = ["src/apps/claims-api", "scripts", "src/apps/policy-checker"]
 
 [[tool.uv.index]]
 url = "https://packagefeedproxy.microsoft.io/pypi/simple/#"

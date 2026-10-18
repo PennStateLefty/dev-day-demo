@@ -1,0 +1,11 @@
+[project]
+name = "claims-policy-checker"
+version = "0.1.0"
+description = "Hosted synthetic policy evidence specialist using a Foundry Toolbox"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "agent-framework-foundry>=1.14.0",
+    "agent-framework-foundry-hosting>=1.0.0b261002",
+    "azure-identity>=1.25,<2",
+    "azure-monitor-opentelemetry>=1.8.10,<2",
+]

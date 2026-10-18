@@ -17,6 +17,7 @@ from pydantic import ValidationError
 
 from .models import Artifact, Claim, EnrichedAssessment, ImageAnalysis, VisionObservations
 from .service import REPOSITORY_ROOT, DemoService, ResourceNotFound
+from .telemetry import log_demo_content
 
 MAX_IMAGE_BYTES = 5 * 1024 * 1024
 MAX_IMAGE_PIXELS = 16_000_000
@@ -108,6 +109,14 @@ class VisionClient:
 
     def analyze(self, claim: Claim, content: bytes, media_type: str) -> VisionObservations:
         encoded = base64.b64encode(content).decode("ascii")
+        log_demo_content("vision.request", {
+            "model": self.deployment,
+            "instructions": VISION_INSTRUCTIONS,
+            "claimant_statement": claim.claimant_statement,
+            "image_sha256": hashlib.sha256(content).hexdigest(),
+            "image_bytes": len(content),
+            "media_type": media_type,
+        }, claim_id=claim.claim_id)
         response = self.client.responses.create(
             model=self.deployment,
             instructions=VISION_INSTRUCTIONS,
@@ -131,6 +140,11 @@ class VisionClient:
             max_output_tokens=2500,
             store=False,
         )
+        log_demo_content("vision.response", {
+            "status": response.status,
+            "model": response.model,
+            "output_text": response.output_text,
+        }, claim_id=claim.claim_id)
         if response.status != "completed":
             raise ValueError("Vision response did not complete.")
         # Azure may return the deployment alias; its model/version is pinned in Bicep.
