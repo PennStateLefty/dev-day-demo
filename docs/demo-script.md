@@ -10,6 +10,45 @@ This planned customer-neutral, 25-minute narrative connects three presenters thr
 | Manage and evaluate (Azure / Foundry) | Foundry as the control plane for versioned agents, tools, and knowledge. | Show the Claim Assessor, Policy Checker and Communication specialists only after deployment and explicit-version invocation work. Publish a prompt change and evaluate against a fixed synthetic set; prove selecting a tested version before calling it rollback. Ground policy evidence through IQ and govern shared tools through APIM. Risk Analyst remains advisory. Hand off tested endpoints and contracts to Studio. |
 | Extend (Copilot Studio) | Studio owns supervision and capability extension. | Build the supervisor that gathers missing information, invokes governed capabilities and presents results for human review. An optional Claims Data Analyst uses bounded SQL tools, not Fabric or arbitrary generated SQL. Prove cross-tenant Entra connectivity; any authentication fallback requires a compatibility result and explicit decision. |
 
+## Build and deploy script (GitHub Copilot)
+
+### Requirement 1: Automated late-report and police-report check
+
+The system automatically checks each claim against the Section 4 claims-process rules. It flags claims reported more than 30 days after the loss, and theft or vandalism claims with no police report. The handler sees the result and only confirms or follows up.
+
+### Requirement 2: Automated exclusion screening
+
+The system automatically screens each claim statement against the policy exclusions in Section 3. It surfaces a possible exclusion with the quoted policy wording and routes the claim to a human adjuster.
+
+### Product Owner: draft user stories from the business requirements
+
+Use **New Chat** in the GitHub Copilot App in **Plan** mode, with `PennStateLefty/dev-day-demo` as context.
+
+1. Prompt:
+
+   > Draft as user story: Requirement 1: Automated late-report and police-report check. The system automatically checks each claim against the Section 4 claims-process rules. It flags claims reported more than 30 days after the loss, and theft or vandalism claims with no police report. The handler sees the result and only confirms or follows up.
+   >
+   > Create as GitHub issue for requirement 1 in: https://github.com/PennStateLefty/dev-day-demo
+
+2. Prompt:
+
+   > Draft as user story: Requirement 2: Automated exclusion screening. The system automatically screens each claim statement against the policy exclusions in Section 3. It surfaces a possible exclusion with the quoted policy wording and routes the claim to a human adjuster.
+   >
+   > Create as GitHub issue for requirement 2 in: https://github.com/PennStateLefty/dev-day-demo
+
+### Developer: implement the user story
+
+1. Select the new issue in the Copilot App and ask the developer agent to plan the implementation (Plan mode).
+2. Review the plan. If unit tests are not explicitly included, prompt to include them.
+3. Prompt to start the implementation.
+4. Run the application to verify the change.
+5. Create a PR to the `main` branch and include the verification screenshots as part of the acceptance criteria.
+6. Add `@copilot` as a Reviewer.
+
+### Handoff
+
+This concludes the requirement, plan, implementation, test and code review flow. Transition to the Foundry hosted agent demo.
+
 ## Shared architecture for the demo
 
 - Copilot Studio supervises three explicit-version Foundry specialists: Claim Assessor, Policy Checker and Communication. The local deterministic orchestrator is not the hosted supervisor.
