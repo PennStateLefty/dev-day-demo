@@ -74,6 +74,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "azure-ai-projects" },
     { name = "azure-identity" },
+    { name = "azure-monitor-opentelemetry" },
     { name = "azure-search-documents" },
     { name = "azure-storage-blob" },
     { name = "fastapi" },
@@ -82,6 +83,8 @@ dependencies = [
     { name = "jsonschema", extra = ["format"] },
     { name = "mssql-python" },
     { name = "openai" },
+    { name = "opentelemetry-instrumentation-fastapi" },
+    { name = "opentelemetry-instrumentation-httpx" },
     { name = "pillow" },
     { name = "pydantic" },
     { name = "pyjwt", extra = ["crypto"] },
@@ -101,6 +104,7 @@ dev = [
 requires-dist = [
     { name = "azure-ai-projects", specifier = ">=2.0.0b2,<3" },
     { name = "azure-identity", specifier = ">=1.25,<2" },
+    { name = "azure-monitor-opentelemetry", specifier = ">=1.8.10,<2" },
     { name = "azure-search-documents", specifier = ">=11.6,<12" },
     { name = "azure-storage-blob", specifier = ">=12.26,<13" },
     { name = "fastapi", specifier = ">=0.116,<1" },
@@ -109,6 +113,8 @@ requires-dist = [
     { name = "jsonschema", extras = ["format"], specifier = ">=4.23,<5" },
     { name = "mssql-python", specifier = ">=1,<2" },
     { name = "openai", specifier = ">=2,<3" },
+    { name = "opentelemetry-instrumentation-fastapi", specifier = ">=0.60b0,<1" },
+    { name = "opentelemetry-instrumentation-httpx", specifier = ">=0.60b0,<1" },
     { name = "pillow", specifier = ">=11,<13" },
     { name = "pydantic", specifier = ">=2.11,<3" },
     { name = "pyjwt", extras = ["crypto"], specifier = ">=2.10,<3" },
@@ -423,6 +429,31 @@ dependencies = [
 sdist = { url = "https://ms-feed-25.pkgs.visualstudio.com/6f084628-a36d-42cb-934d-057357e379dc/_packaging/49d7402f-07bb-4b18-a9ce-086e6e98a554/pypi/download/azure-identity/1.26/azure_identity-1.26.0.tar.gz", hash = "sha256:61b4538b87df10d2d6d44b77cd5ea28a8929fd4929d58b45bf3f230f7daba02e", size = 310151, upload-time = "2026-10-01T18:59:17Z" }
 wheels = [
     { url = "https://ms-feed-25.pkgs.visualstudio.com/6f084628-a36d-42cb-934d-057357e379dc/_packaging/49d7402f-07bb-4b18-a9ce-086e6e98a554/pypi/download/azure-identity/1.26/azure_identity-1.26.0-py3-none-any.whl", hash = "sha256:3c60d9682b3ac01507388d474cb5a5ffbe54152a96b6cdcaa7013da9315cf186", size = 195958, upload-time = "2026-10-01T16:40:32Z" },
+]
+
+[[package]]
+name = "azure-monitor-opentelemetry"
+version = "1.8.11"
+source = { registry = "https://packagefeedproxy.microsoft.io/pypi/simple/#" }
+dependencies = [
+    { name = "azure-core" },
+    { name = "azure-core-tracing-opentelemetry" },
+    { name = "azure-monitor-opentelemetry-exporter" },
+    { name = "opentelemetry-instrumentation-django" },
+    { name = "opentelemetry-instrumentation-fastapi" },
+    { name = "opentelemetry-instrumentation-flask" },
+    { name = "opentelemetry-instrumentation-httpx" },
+    { name = "opentelemetry-instrumentation-logging" },
+    { name = "opentelemetry-instrumentation-psycopg2" },
+    { name = "opentelemetry-instrumentation-requests" },
+    { name = "opentelemetry-instrumentation-urllib" },
+    { name = "opentelemetry-instrumentation-urllib3" },
+    { name = "opentelemetry-resource-detector-azure" },
+    { name = "opentelemetry-sdk" },
+]
+sdist = { url = "https://ms-feed-25.pkgs.visualstudio.com/6f084628-a36d-42cb-934d-057357e379dc/_packaging/49d7402f-07bb-4b18-a9ce-086e6e98a554/pypi/download/azure-monitor-opentelemetry/1.8.11/azure_monitor_opentelemetry-1.8.11.tar.gz", hash = "sha256:606e41ded61f330634f997b6378671168c10e0a7fcf4dfd1238235bc17df05f4", size = 82105, upload-time = "2026-10-15T06:24:09Z" }
+wheels = [
+    { url = "https://ms-feed-25.pkgs.visualstudio.com/6f084628-a36d-42cb-934d-057357e379dc/_packaging/49d7402f-07bb-4b18-a9ce-086e6e98a554/pypi/download/azure-monitor-opentelemetry/1.8.11/azure_monitor_opentelemetry-1.8.11-py3-none-any.whl", hash = "sha256:034a9d7ccc0c944986963ad2a5f4da11d669538ae797f7f4edad803ca8e9127d", size = 43125, upload-time = "2026-10-08T02:02:38Z" },
 ]
 
 [[package]]

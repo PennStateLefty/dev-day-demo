@@ -35,6 +35,11 @@ param visionModelVersion string = ''
 @description('Optional pinned Claim Assessor; configure endpoint and version together.')
 param foundryProjectEndpoint string = ''
 param claimAssessorVersion string = ''
+param applicationInsightsName string
+
+resource insights 'Microsoft.Insights/components@2020-02-02' existing = {
+  name: applicationInsightsName
+}
 
 var authorizedClientIds = '${apiClientIds},${foundryProjectClientId}'
 var runtimeSettings = {
@@ -54,7 +59,14 @@ var runtimeSettings = {
   CLAIMS_VISION_MODEL_VERSION: visionModelVersion
   FOUNDRY_PROJECT_ENDPOINT: foundryProjectEndpoint
   CLAIM_ASSESSOR_AGENT_VERSION: claimAssessorVersion
+  OTEL_SERVICE_NAME: 'claims-api'
+  CLAIMS_LOG_DEMO_CONTENT: 'true'
+  AZURE_EXPERIMENTAL_ENABLE_GENAI_TRACING: 'false'
 }
+var runtimeEnvironment = [for entry in items(runtimeSettings): {
+  name: entry.key
+  value: entry.value
+}]
 
 resource application 'Microsoft.App/containerApps@2025-01-01' = {
   name: appName
@@ -94,10 +106,12 @@ resource application 'Microsoft.App/containerApps@2025-01-01' = {
         {
           name: 'claims-api'
           image: imageName
-          env: [for entry in items(runtimeSettings): {
-            name: entry.key
-            value: entry.value
-          }]
+          env: concat(runtimeEnvironment, [
+              {
+                name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+                value: insights.properties.ConnectionString
+              }
+            ])
           resources: {
             cpu: json('0.5')
             memory: '1Gi'

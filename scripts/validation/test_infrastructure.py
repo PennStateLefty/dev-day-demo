@@ -181,21 +181,72 @@ class GatewayPolicyTests(unittest.TestCase):
             "failed-validation-httpcode": "401",
         }.items():
             self.assertEqual(jwt.get(name), value)
-        self.assertEqual(jwt.findtext("./audiences/audience"), "__AUDIENCE__")
+        self.assertIsNone(jwt.find("./audiences"))
         self.assertEqual(
             jwt.findtext("./issuers/issuer"),
             "https://login.microsoftonline.com/__TENANT__/v2.0",
         )
-        self.assertEqual(
-            jwt.findtext("./required-claims/claim[@name='azp']/value"), "explicit-client-id"
-        )
         self.assertEqual(jwt.findtext("./required-claims/claim[@name='tid']/value"), "__TENANT__")
-        self.assertEqual(jwt.findtext("./required-claims/claim[@name='ver']/value"), "2.0")
+        self.assertIsNone(jwt.find("./required-claims/claim[@name='ver']"))
+        self.assertIsNone(jwt.find("./required-claims/claim[@name='azp']"))
         self.assertEqual(policy.find("./backend/forward-request").get("buffer-response"), "false")
         self.assertIsNone(policy.find(".//set-header[@name='Authorization']"))
-        self.assertEqual(
-            policy.find("./inbound/choose/when/return-response/set-status").get("code"), "403"
+        self.assertIsNone(policy.find("./inbound/choose"))
+
+
+class PolicyCheckerToolboxGatewayPolicyTests(unittest.TestCase):
+    def test_focused_template_adds_agent_to_existing_claims_mcp_allowlist(self) -> None:
+        template = (
+            Path(__file__).resolve().parents[2] / "infrastructure/policy-checker-toolbox-apim.bicep"
+        ).read_text()
+        self.assertIn("param policyCheckerAgentClientId string", template)
+        self.assertIn("param foundryProjectClientId string", template)
+        self.assertIn("@minLength(1)\nparam toolboxVersion string", template)
+        self.assertIn("var claimsMcpClientIds = union(", template)
+        self.assertIn("[policyCheckerAgentClientId],", template)
+        self.assertIn("[foundryProjectClientId]", template)
+        self.assertIn("name: 'synthetic-claims-tools'", template)
+        self.assertIn("loadTextContent('./policies/claims-auth.xml')", template)
+
+    def test_focused_template_uses_streamable_mcp_passthrough_contract(self) -> None:
+        template = (
+            Path(__file__).resolve().parents[2] / "infrastructure/policy-checker-toolbox-apim.bicep"
+        ).read_text()
+        self.assertIn(
+            "url: '${projectEndpoint}/toolboxes/${toolboxName}/versions/${toolboxVersion}'",
+            template,
         )
+        self.assertIn("transportType: 'streamable'", template)
+        self.assertIn("mcp: {", template)
+        self.assertIn("uriTemplate: '/mcp'", template)
+        self.assertIn("backendId: toolboxBackend.name", template)
+
+    def test_versioned_toolbox_backend_keeps_inbound_auth_and_streaming(self) -> None:
+        path = (
+            Path(__file__).resolve().parents[2]
+            / "infrastructure/policies/policy-checker-toolbox-auth.xml"
+        )
+        policy = ElementTree.fromstring(
+            path.read_text().replace("__CLIENTS__", "<value>explicit-client-id</value>")
+        )
+        jwt = policy.find("./inbound/validate-jwt")
+        self.assertIsNotNone(jwt)
+        self.assertIsNone(jwt.find("./audiences"))
+        self.assertIsNone(jwt.find("./required-claims/claim[@name='azp']"))
+        self.assertEqual(jwt.findtext("./required-claims/claim[@name='tid']/value"), "__TENANT__")
+        self.assertIsNone(policy.find("./inbound/choose"))
+        managed_identity = policy.find("./inbound/authentication-managed-identity")
+        self.assertIsNotNone(managed_identity)
+        self.assertEqual(managed_identity.get("resource"), "https://ai.azure.com")
+        self.assertEqual(
+            policy.findtext("./inbound/set-query-parameter/value"),
+            "v1",
+        )
+        self.assertEqual(
+            policy.find("./backend/forward-request").get("buffer-response"),
+            "false",
+        )
+        self.assertIsNone(policy.find(".//set-header[@name='Authorization']"))
 
 
 class ApplicationTests(unittest.TestCase):
@@ -222,7 +273,7 @@ class ApplicationTests(unittest.TestCase):
                     "CLAIMS_MODE": "azure",
                     "CLAIMS_API_CLIENT_IDS": "[variables('authorizedClientIds')]",
                     "CLAIMS_UI_CLIENT_ID": "[parameters('uiClientId')]",
-                }
+                },
             },
             "resources": [
                 {

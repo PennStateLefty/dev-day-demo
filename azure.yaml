@@ -21,6 +21,36 @@ services:
         shell: sh
         run: uv run --locked python scripts/validation/azure_preflight.py --configuration-only
         interactive: false
+  policy-checker:
+    host: azure.ai.agent
+    kind: hosted
+    project: src/apps/policy-checker
+    language: python
+    name: policy-checker
+    description: Read-only synthetic policy evidence lookup with citations for human review.
+    metadata:
+      tags:
+        - Agent Framework
+        - Hosted Specialist
+        - Policy Evidence
+    codeConfiguration:
+      runtime: python_3_13
+      entryPoint: main.py
+    protocols:
+      - protocol: responses
+        version: 2.0.0
+    env:
+      AZURE_AI_PROJECT_ENDPOINT: ${AZURE_AI_PROJECT_ENDPOINT}
+      AZURE_AI_MODEL_DEPLOYMENT_NAME: ${AZURE_AI_MODEL_DEPLOYMENT_NAME}
+      POLICY_CHECKER_TOOLBOX_ENDPOINT: ${POLICY_CHECKER_TOOLBOX_ENDPOINT}
+      POLICY_CHECKER_TOOLBOX_VERSION: ${POLICY_CHECKER_TOOLBOX_VERSION}
+      APPLICATIONINSIGHTS_CONNECTION_STRING: ${APPLICATIONINSIGHTS_CONNECTION_STRING}
+      ENABLE_SENSITIVE_DATA: 'false'
+      OTEL_SERVICE_NAME: policy-checker
+    container:
+      resources:
+        cpu: '0.5'
+        memory: 1Gi
 
 hooks:
   postprovision:
