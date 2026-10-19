@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { Claim, WorkflowResult } from "./types";
+import type { CheckStatus, Claim, WorkflowResult } from "./types";
 import type { Session } from "./auth";
 import EvidencePreview from "./EvidencePreview";
 
@@ -11,6 +11,7 @@ export default function App({ session }: { session: Session }) {
   const [claims, setClaims] = useState<Claim[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const [result, setResult] = useState<WorkflowResult | null>(null);
+  const [checkStatuses, setCheckStatuses] = useState<Record<string, CheckStatus>>({});
   const activeRun = useRef<AbortController | null>(null);
   const [loadingClaims, setLoadingClaims] = useState(true);
   const [running, setRunning] = useState(false);
@@ -38,8 +39,10 @@ export default function App({ session }: { session: Session }) {
 
   async function runAssessment() {
     if (!selectedId || activeRun.current) return;
+    const claimId = selectedId;
     const controller = new AbortController();
     activeRun.current = controller;
+    setCheckStatuses((statuses) => ({ ...statuses, [claimId]: "running" }));
     setRunning(true);
     setError("");
     setResult(null);
@@ -53,10 +56,14 @@ export default function App({ session }: { session: Session }) {
         throw new Error(detail.detail ?? `Assessment request failed (${response.status}).`);
       }
       const data = await response.json() as WorkflowResult;
-      if (!controller.signal.aborted) setResult(data);
+      if (!controller.signal.aborted) {
+        setResult(data);
+        setCheckStatuses((statuses) => ({ ...statuses, [claimId]: "complete" }));
+      }
     } catch (reason: unknown) {
       if (!controller.signal.aborted) {
         setError(reason instanceof Error ? reason.message : "Unable to run the assessment.");
+        setCheckStatuses((statuses) => ({ ...statuses, [claimId]: "failed" }));
       }
     } finally {
       if (activeRun.current === controller) {
@@ -68,6 +75,14 @@ export default function App({ session }: { session: Session }) {
 
   const selectedClaim = claims.find((claim) => claim.claimId === selectedId);
   const assessment = result?.assessment;
+  const statusLabel = (claimId: string) => {
+    switch (checkStatuses[claimId] ?? "not_run") {
+      case "running": return "Running checks";
+      case "complete": return "Checks complete — human review required";
+      case "failed": return "Checks failed";
+      default: return "Not run this session";
+    }
+  };
 
   return (
     <main className="layout">
@@ -105,6 +120,9 @@ export default function App({ session }: { session: Session }) {
               id="claim-select"
               value={selectedId}
               onChange={(event) => {
+                if (activeRun.current) {
+                  setCheckStatuses((statuses) => ({ ...statuses, [selectedId]: "not_run" }));
+                }
                 activeRun.current?.abort();
                 activeRun.current = null;
                 setSelectedId(event.target.value);
@@ -116,7 +134,7 @@ export default function App({ session }: { session: Session }) {
             >
               {claims.map((claim) => (
                 <option key={claim.claimId} value={claim.claimId}>
-                  {claim.claimId}
+                  {claim.claimId} | {claim.lossDate ?? "No loss date"} | {statusLabel(claim.claimId)}
                 </option>
               ))}
             </select>
