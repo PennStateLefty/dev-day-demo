@@ -17,7 +17,7 @@ from initialize_knowledge import (
     seed_search,
     source_definition,
 )
-from initialize_sql import initialize, runtime_grants
+from initialize_sql import initialize, migration_batches, runtime_grants
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -30,7 +30,9 @@ def test_contained_identity_is_uuid_validated_and_least_privileged() -> None:
     assert "db_datawriter" not in grant
     assert "db_owner" not in grant
     assert "GRANT SELECT ON OBJECT::claims.Claim" in grant
+    assert "GRANT SELECT ON OBJECT::claims.Communication" in grant
     assert "GRANT EXECUTE ON OBJECT::claims.AddReviewNote" in grant
+    assert "GRANT EXECUTE ON OBJECT::claims.MarkCommunicationSent" in grant
     with pytest.raises(ValueError):
         runtime_grants("'; DROP TABLE claims.Claim;--")
     assert "DROP USER" not in grant
@@ -52,7 +54,7 @@ def test_initial_sql_seed_commits_in_relational_dependency_order() -> None:
     cursor = connection.cursor.return_value
     cursor.fetchall.return_value = []
     result = initialize(lambda: connection, "00000000-0000-0000-0000-000000000001", DemoService())
-    assert result == {"passed": True, "migrations_applied": 2, "records_inserted": 9}
+    assert result == {"passed": True, "migrations_applied": 3, "records_inserted": 9}
     calls = [call.args[0] for call in cursor.execute.call_args_list]
     policy = next(i for i, sql in enumerate(calls) if sql.startswith("INSERT claims.Policy"))
     claim = next(i for i, sql in enumerate(calls) if sql.startswith("INSERT claims.Claim"))
@@ -61,6 +63,15 @@ def test_initial_sql_seed_commits_in_relational_dependency_order() -> None:
     connection.commit.assert_called_once()
     connection.rollback.assert_not_called()
     connection.close.assert_called_once()
+
+
+def test_sql_migration_batches_split_procedure_definitions() -> None:
+    batches = migration_batches(
+        "CREATE TABLE sample (id int);\nGO\nCREATE OR ALTER PROCEDURE sample_proc AS SELECT 1;"
+    )
+    assert len(batches) == 2
+    assert batches[0].startswith("CREATE TABLE")
+    assert batches[1].startswith("CREATE OR ALTER PROCEDURE")
 
 
 def test_sql_redeployment_does_not_reinsert_or_reapply() -> None:

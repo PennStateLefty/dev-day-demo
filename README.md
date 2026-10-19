@@ -30,7 +30,9 @@ npm run dev --prefix src/apps/claims-handler-ui
 
 Open the Vite URL printed in the terminal (normally `http://localhost:5173`). The API listens at `http://localhost:8000`; its OpenAPI document is at `/docs`, and the MCP endpoint is mounted at `/mcp`.
 
-The local workflow is deterministic and uses checked-in synthetic fixtures. The optional Foundry integration is isolated behind configuration and has not been exercised against a live Foundry project.
+The local workflow is deterministic and uses checked-in synthetic fixtures. The
+deployed Azure demo and Foundry integrations are documented below and in the
+deployment guide; the local quickstart does not require Azure resources.
 
 ## Validation
 
@@ -50,21 +52,37 @@ GitHub Actions runs the Python checks, UI typecheck/build, container image build
 
 `azure.yaml` points `azd` at subscription-scope Bicep under `infrastructure/`. The platform foundation defines an isolated resource group, Container Apps environment and runtime identity, ACR, monitoring, Entra-only SQL, private Blob containers, Foundry account/project and pinned models, Basic Search, Developer APIM, Free API Center and scoped RBAC. Networking defaults to `enforced-perimeter`; the operator selected explicit `public-demo` mode for portal-driven presentations, retaining identity-only authentication.
 
-`azure.yaml` also declares a remote-built Container Apps service. Its separate Bicep revision template requires the real published image, attaches the runtime managed identity and explicitly enables Azure mode. Postprovision hooks apply relational SQL migrations, synthetic seeds and object-level contained-user grants, then initialize Blob policies and extractive IQ knowledge. Azure mode requires Entra v2 bearer authentication for REST/MCP, reads SQL and retrieves live IQ citations without fixture fallback; local mode remains unchanged.
+`azure.yaml` also declares a remote-built Container Apps service. Its separate Bicep revision template requires the real published image, attaches the runtime managed identity and explicitly enables Azure mode. postprovision hooks apply relational SQL migrations, synthetic seeds and object-level contained-user grants, then initialize Blob policies and extractive IQ knowledge. Azure mode requires signed bearer tokens from the configured tenant for REST/MCP (tenant-only demo admission, not production authorization), reads SQL and retrieves live IQ citations without fixture fallback; local mode remains unchanged.
 
 The hosted UI implements tenant-specific MSAL PKCE sign-in with a separate SPA registration. A plan-first identity initializer can create isolated secretless API/SPA registrations, but never grants consent or caller roles. REST/native MCP gateway routes and bearer policies are declared with the application revision; ARM and runtime validation remain required.
 
-**The Azure foundation is deployed; the complete hosted demo is not finished.** Authenticated direct/APIM readiness and MCP calls, managed-identity SQL reads/append-only notes, cited IQ/Blob retrieval and both pinned model deployments have worked live. Serverless Search failed; only the approved single-unit Basic replacement remains. Portal-driven networking and the current APIM platform-upgrade status are recorded in the deployment guide. Browser sign-in, specialist connections and model gateway integration remain unfinished. Do not expose the unauthenticated **local-mode** container. See [Azure deployment and bill of materials](docs/azure-deployment.md) for evidence and remaining work.
+**The Azure foundation and claims application are deployed.** Claim Assessor v3,
+Policy Checker v1, and Communication v2 have been published and exercised;
+check-then-draft persisted a Communication record for a synthetic claim. Drafts
+remain subject to human review and are never sent. Actual Copilot Studio
+connector onboarding/supervision, Risk Analyst skill integration, and
+interactive browser sign-in remain unfinished. Do not expose the unauthenticated
+**local-mode** container. See [Azure deployment and bill of materials](docs/azure-deployment.md)
+for evidence and remaining work.
 
 ## Repository map
 
 - `src/apps/claims-api/` — shared deterministic service, REST API, MCP tools, and local orchestrator.
 - `src/apps/claims-handler-ui/` — React/TypeScript handler experience.
+- `src/apps/policy-checker/` — hosted Policy Checker service.
+- `agents/` and `scripts/agents/` — versioned Foundry agent/skill sources and publishers.
 - `data/` — synthetic claim/artifact fixtures, adapted fictional policy, and JSON Schemas.
 - `evaluations/datasets/` — independently authored baseline cases.
 - `src/tests/` — unit, REST/MCP contract, and evaluation checks.
-- `infrastructure/`, `azure.yaml`, and `Dockerfile` — local packaging and modular Azure platform foundation.
+- `infrastructure/`, `azure.yaml`, and `Dockerfile` — modular Azure infrastructure and application packaging.
 - `ASSET-PROVENANCE.md`, `THIRD-PARTY-NOTICES.md` — source and license records.
-- `docs/` — phase specification, architecture, threat model, decisions, and demo outline.
+- `docs/` — current architecture, deployment runbook, handoff, threat model, and demo outline.
+
+The initial scaffold's empty `src/agents/`, `src/packages/`, `src/mcp/`,
+`infrastructure/environments/`, `scripts/bootstrap/`, `scripts/demo/`,
+`copilot-studio/`, and `ado/` paths have been removed. Agent sources live at the
+repository root under `agents/`; the API owns shared contracts and MCP tools.
+Empty scaffold directories are not kept in Git; create a directory when its
+first real implementation or asset exists.
 
 The repository currently has no root license. Refer to the provenance and third-party notices before reusing any adapted asset.

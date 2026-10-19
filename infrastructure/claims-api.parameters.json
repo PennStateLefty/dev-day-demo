@@ -26,6 +26,7 @@
     "visionModelVersion": { "value": "${CLAIMS_VISION_MODEL_VERSION=}" },
     "foundryProjectEndpoint": { "value": "${FOUNDRY_PROJECT_ENDPOINT=}" },
     "claimAssessorVersion": { "value": "${CLAIM_ASSESSOR_AGENT_VERSION=}" },
+    "claimCommunicationVersion": { "value": "${CLAIM_COMMUNICATION_AGENT_VERSION=}" },
     "applicationInsightsName": { "value": "${AZURE_APPLICATION_INSIGHTS_NAME}" }
   }
 }

@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/agentic-sdlc-demo/schemas/communication-record.schema.json",
+  "title": "Synthetic customer communication record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "communicationId",
+    "claimId",
+    "assessmentId",
+    "citationIds",
+    "artifactIds",
+    "body",
+    "createdAt",
+    "reviewedBy",
+    "reviewedAt",
+    "sentAt",
+    "humanReviewRequired"
+  ],
+  "properties": {
+    "communicationId": {
+      "type": "string",
+      "pattern": "^com-[a-f0-9-]{36}$"
+    },
+    "claimId": {
+      "type": "string",
+      "pattern": "^clm-[a-z0-9-]+$"
+    },
+    "assessmentId": {
+      "type": "string",
+      "pattern": "^asm-[a-z0-9-]+$"
+    },
+    "citationIds": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^cit-[a-z0-9-]+$"
+      }
+    },
+    "artifactIds": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^art-[a-z0-9-]+$"
+      }
+    },
+    "body": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 10000
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "reviewedBy": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "reviewedAt": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "sentAt": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "humanReviewRequired": {
+      "const": true
+    }
+  }
+}

@@ -7,6 +7,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 import sys
 from contextlib import closing
 from pathlib import Path
@@ -21,6 +22,14 @@ from app.database import Connect, connection_string, connector, payload  # noqa:
 from app.service import DemoService  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def migration_batches(sql: str) -> list[str]:
+    return [
+        batch.strip()
+        for batch in re.split(r"(?im)^\s*GO\s*(?:--.*)?$", sql)
+        if batch.strip()
+    ]
 
 
 def runtime_grants(client_id: str, legacy_principal_id: str | None = None) -> str:
@@ -57,7 +66,11 @@ IF NOT EXISTS (
 GRANT SELECT ON OBJECT::claims.Policy TO claims_runtime;
 GRANT SELECT ON OBJECT::claims.Claim TO claims_runtime;
 GRANT SELECT ON OBJECT::claims.Artifact TO claims_runtime;
+GRANT SELECT ON OBJECT::claims.Communication TO claims_runtime;
 GRANT EXECUTE ON OBJECT::claims.AddReviewNote TO claims_runtime;
+GRANT EXECUTE ON OBJECT::claims.CreateCommunication TO claims_runtime;
+GRANT EXECUTE ON OBJECT::claims.MarkCommunicationReviewed TO claims_runtime;
+GRANT EXECUTE ON OBJECT::claims.MarkCommunicationSent TO claims_runtime;
 """
 
 
@@ -92,7 +105,8 @@ IF OBJECT_ID(N'dbo.ClaimsMigration', N'U') IS NULL
                     if existing[0][0] != digest:
                         raise ValueError(f"Applied migration changed: {migration.name}.")
                     continue
-                cursor.execute(sql)
+                for batch in migration_batches(sql):
+                    cursor.execute(batch)
                 cursor.execute(
                     "INSERT dbo.ClaimsMigration(name, sha256) VALUES (?, ?)",
                     (migration.name, digest),

@@ -4,8 +4,15 @@ from unittest.mock import Mock, patch
 
 import httpx
 import pytest
-from app.database import SqlClaimsStore, connection_string, connector, payload
+from app.database import (
+    InMemoryCommunicationStore,
+    SqlClaimsStore,
+    connection_string,
+    connector,
+    payload,
+)
 from app.knowledge import SearchPolicyKnowledge
+from app.models import CommunicationRecord
 from app.search_rest import KnowledgeError, SearchRestClient
 from app.service import DemoService, ResourceNotFound
 from app.settings import Settings
@@ -87,6 +94,73 @@ def test_sql_review_write_is_bounded_and_committed() -> None:
     for note in (" ", "", "a" * 2001):
         with pytest.raises(ValueError):
             store.add_review_note("clm-demo-001", note)
+
+
+def test_sql_communication_writes_use_fixed_procedures_and_commit() -> None:
+    connection = Mock()
+    cursor = connection.cursor.return_value
+    record = CommunicationRecord(
+        communication_id="com-00000000-0000-0000-0000-000000000001",
+        claim_id="clm-demo-001",
+        assessment_id="asm-demo-001",
+        citation_ids=["cit-demo-001"],
+        artifact_ids=["art-demo-photo-001"],
+        body="A handler will review the information.",
+        created_at="2026-10-18T15:00:00Z",
+        human_review_required=True,
+    )
+    record_json = record.model_dump_json(by_alias=True)
+    cursor.fetchall.return_value = [(record_json,)]
+    store = SqlClaimsStore(lambda: connection)
+
+    assert store.create_communication(record) == record
+    assert cursor.execute.call_args.args == (
+        "EXEC claims.CreateCommunication @payload = ?",
+        (record_json,),
+    )
+    connection.commit.assert_called_once()
+
+    connection.reset_mock()
+    cursor = connection.cursor.return_value
+    cursor.fetchall.return_value = [("updated", record_json)]
+    reviewed = store.mark_communication_reviewed(record.communication_id, "Demo Handler")
+    assert reviewed == record
+    assert cursor.execute.call_args.args == (
+        "EXEC claims.MarkCommunicationReviewed @communication_id = ?, @reviewer = ?",
+        (record.communication_id, "Demo Handler"),
+    )
+    connection.commit.assert_called_once()
+
+    connection.reset_mock()
+    cursor = connection.cursor.return_value
+    cursor.fetchall.return_value = [("missing", None)]
+    with pytest.raises(LookupError, match="not found"):
+        store.mark_communication_sent(record.communication_id)
+    connection.commit.assert_not_called()
+
+
+def test_local_communication_store_requires_review_before_marking_sent() -> None:
+    store = InMemoryCommunicationStore()
+    record = CommunicationRecord(
+        communication_id="com-00000000-0000-0000-0000-000000000002",
+        claim_id="clm-demo-001",
+        assessment_id="asm-demo-001",
+        citation_ids=[],
+        artifact_ids=[],
+        body="A handler will review the information.",
+        created_at="2026-10-18T15:00:00Z",
+        human_review_required=True,
+    )
+    store.create_communication(record)
+    with pytest.raises(ValueError, match="reviewed"):
+        store.mark_communication_sent(record.communication_id)
+    reviewed = store.mark_communication_reviewed(record.communication_id, "Demo Handler")
+    sent = store.mark_communication_sent(record.communication_id)
+    assert reviewed.reviewed_by == "Demo Handler"
+    assert sent.reviewed_at is not None and sent.sent_at is not None
+    assert store.list_communications(record.claim_id) == [sent]
+    with pytest.raises(ValueError, match="already been marked sent"):
+        store.mark_communication_sent(record.communication_id)
 
 
 def test_cloud_service_does_not_load_or_fall_back_to_fixtures() -> None:
@@ -247,3 +321,19 @@ def test_live_vision_and_pinned_handler_configuration_cannot_be_partial_or_arbit
     ):
         with pytest.raises(ValueError):
             Settings.from_environment(configured | override)
+
+
+def test_communication_agent_version_is_optional_but_pinned_when_configured() -> None:
+    configured = cloud_values() | {
+        "FOUNDRY_PROJECT_ENDPOINT": "https://demo.services.ai.azure.com/api/projects/claims",
+        "CLAIM_ASSESSOR_AGENT_VERSION": "3",
+        "CLAIM_COMMUNICATION_AGENT_VERSION": "1",
+    }
+    assert Settings.from_environment(configured).communication_version == "1"
+    with pytest.raises(ValueError, match="explicit positive version"):
+        Settings.from_environment(configured | {"CLAIM_COMMUNICATION_AGENT_VERSION": "latest"})
+    with pytest.raises(ValueError, match="requires a Foundry endpoint"):
+        Settings.from_environment({
+            **cloud_values(),
+            "CLAIM_COMMUNICATION_AGENT_VERSION": "1",
+        })

@@ -1,8 +1,10 @@
 # Specialist session handoff
 
-Status: 2026-10-18. Start the next session from current `main` after this
-specialist/vision slice is merged. This is a working demo foundation, not a
-completed end-to-end specialist experience.
+Status: 2026-10-19. The Communication source implementation, immutable Foundry
+version 2, and API/SQL/UI rollout are complete in this worktree. The next
+specialist work is the Risk Analyst skill integration. This is a working demo
+foundation; actual Copilot Studio connector onboarding/supervision remains
+unfinished.
 
 Authentication decision (October 18, supersedes permission requirements below):
 the operator explicitly selected tenant-only bearer authentication for this
@@ -32,7 +34,7 @@ experimental SDK GenAI hook is disabled after its `NonRecordingSpan.attributes`
 bug caused a live 500; explicit content traces and request/dependency export
 remain enabled. Hosted Policy Checker v1 is unaffected.
 
-## Purpose and next feature
+## Purpose and next session
 
 Build a compelling synthetic demonstration for developers, project managers and
 QA. Keep MCP and Copilot Studio agent policies simple: essential authentication,
@@ -40,30 +42,97 @@ bounded tools and human review, not production policy sophistication. Exact
 damage recognition is not a release gate. No fine-tuning or further vision prompt
 optimization is planned.
 
-The hosted Policy Checker is implemented and working independently. Next work
-should use two fresh sessions: the Communications agent and the Risk Assessor
-skill (currently named `risk-analyst` in source). Claim Assessor remains a prompt
-agent. Copilot Studio remains the supervisor; do not add a Foundry orchestrator
-or Foundry Workflows.
+The hosted Policy Checker is implemented and working independently. The
+Communication agent source, Foundry version 2, and live API/SQL/UI rollout are
+complete. Claim Assessor remains a prompt agent. The next session should finish
+the Risk Analyst skill integration, then start the RAG/Foundry knowledge-source
+enhancements and prepare an independently attachable communication-template
+Skill. Copilot Studio remains the intended supervisor; do not add a Foundry
+orchestrator or Foundry Workflows.
 
-### Fresh session: Communications agent
+### Next session: ordered scope
 
-Start from current `main` and this handoff. Review `data/schemas/` for the response
-draft contract, existing communication behavior in `app/agents.py`, and
-`docs/architecture.md` before implementing a separate versioned Foundry agent.
-The current UI `/workflow` invokes only Claim Assessor; Policy Checker and
-Communications are not implicitly part of that path.
+1. **Finish Risk Analyst Skill integration.** Continue the bounded advisory
+   skill described below. Keep it read-only, evidence-linked and human-reviewed.
+   Do not add risk scores, fraud classifications, coverage decisions, or a
+   separate agent.
+2. **Prepare a reusable communication-template Skill in Foundry.** The demo
+   should show an operator adding this pre-created Skill to the existing
+   Communication agent in Foundry. The Skill should provide a small, reviewed
+   set of communication-template patterns (the user will choose the useful
+   template types in the next session) while preserving the existing wording
+   safeguards. Confirm the supported Foundry Skill asset and attachment flow,
+   create/publish the asset in Foundry, and verify it is available to add.
+   **Do not wire template selection or Skill invocation into the
+   claims API, handler UI, or other application code.** The point is to show the
+   Foundry authoring workflow of adding a Skill to the agent, not to change the
+   deployed UI workflow. Keep Communication v2 selected until an explicitly
+   approved Foundry update is ready; adding a Skill in Foundry is a separate
+   demo action and must not silently alter the live UI pin.
+3. **Add Foundry IQ knowledge sources for Copilot Studio planning.** The
+   intended example content includes synthetic policy references and procedural
+   checklists. Existing policy IQ retrieval is already part of the handler's
+   current assessment path; do not silently redirect or alter it. Add or expose
+   the additional planning sources for Copilot Studio to retrieve while planning
+   a response/workflow. These new sources are **not inputs to the existing
+   claims-handler UI flow or its Claim Assessor/Communication sequence**.
+   Preserve that boundary in source, configuration, tests and the architecture
+   diagram. First inspect the existing Foundry IQ/Search assets and decide the
+   simplest reuse path; avoid creating duplicate infrastructure or overbuilding
+   a retrieval layer. Verify source grounding and missing/ambiguous retrieval
+   behavior with synthetic content.
 
-The agent should consume verified assessment/recommendation and policy evidence,
-draft a clear handler-reviewable communication, and preserve claim/citation/
-artifact linkage. It must never send messages, decide coverage, approve/deny a
-claim, invent evidence or infer intent. Exercise normal, missing-evidence,
-unavailable-image and conflicting-information cases. Keep the current UI working;
-make any workflow integration explicit. Reuse the existing project/model and
-tenant-only demo authentication. Publish and pin an immutable version, prove
-actual invocation/output validation, and retain useful synthetic content traces.
+Keep these as distinct demo capabilities: the Communication Skill is manually
+added to the Communication agent in Foundry, while the IQ sources are intended
+for Copilot Studio planning. Neither change should be represented as already
+integrated into the current handler UI. Coordinate Foundry version/default
+changes and shared Azure deployments; do not provision a new foundation or
+create another Foundry project by default. Ask the user before adding
+significant complexity or expanding beyond the stated demo scope.
 
-### Fresh session: Risk Assessor skill
+### Communication agent: implemented and deployed
+
+The source adds a no-tools, draft-only prompt agent, strict response/record
+schemas, explicit API routes, SQL persistence procedures, and a UI workflow
+separate from `/workflow`. Claim, assessment, citation, and artifact links remain
+record metadata; the body omits internal references. Human review and mark-sent
+actions store reviewer/timestamps only and never transmit a message. Customer
+wording validation rejects internal references, claims that handler review
+already occurred, and promises of follow-up or timing.
+
+The handler UI now reveals a separate draft action only after `Run handler checks`
+returns successfully. It submits that assessment ID; the API reuses the verified
+per-process result and calls only the Communication agent. Drafting does not
+repeat Claim Assessor. The check result is transient; after an API restart, rerun
+handler checks before drafting.
+
+Foundry agent `communication` version **2** is published with source digest
+`ed867c13f62a64e6096bb454c7ab5b84d637614ae15938c41326c8399f7d54fd`, using
+`claims-chat`. Direct version-pinned invocations for normal, missing-evidence,
+unavailable-image and conflicting-information scenarios completed; each output
+passed the strict JSON schema and API customer-wording validator. The Foundry
+MCP identity still receives 403 for `agents/read`; the repository publisher and
+invocation used local `DefaultAzureCredential` successfully. Do not grant roles
+automatically.
+
+The approved application-only rollout is complete: the idempotent SQL
+initializer applied one migration and inserted no records; the existing
+`claims-demo` environment pins `CLAIM_COMMUNICATION_AGENT_VERSION=2`; and
+`azd deploy claims-api --no-prompt` deployed only the claims API/UI revision.
+No foundation provisioning or role changes were made. Existing runtime ACR Pull
+and Foundry Agent Consumer assignments were confirmed.
+
+Live `/health`, authenticated `/ready`, unauthenticated REST/MCP denial, and
+authenticated MCP smoke checks passed. A live handler-check followed by a
+Communication v2 draft for synthetic claim `clm-demo-001` persisted claim,
+assessment, citation and artifact metadata; the customer-text guard passed.
+The draft was left unreviewed and unsent, and no message was transmitted; a
+mark-sent attempt before review returned 409 and left the record unchanged. The
+UI bundle and its handler-check/draft actions were verified. Application
+Insights recorded the successful draft request and Communication traces;
+interactive browser sign-in remains unverified.
+
+### Risk Analyst implementation details
 
 Start from current `main`; develop the existing advisory skill rather than a
 fourth standalone agent. Its source name is **Risk Analyst**:
@@ -94,10 +163,12 @@ no per-user OBO flow, and the Studio-facing route does not change the hosted
 agent's direct path.
 
 Read `docs/architecture.md`, `docs/azure-deployment.md`, `docs/open-questions.md`,
-schemas, tool contracts, `agents/`, and `scripts/agents/`. Original `src/agents/`
-folders are placeholders; `app/agents.py` is the older two-specialist adapter.
+schemas, tool contracts, `agents/`, and `scripts/agents/`. Agent sources live
+under repository-root `agents/`; `src/apps/claims-api/app/agents.py` is the
+older two-specialist adapter.
 Risk Analyst Skill v1 is published but has no configured MCP Toolbox/connection.
-Communication is still future work and must draft, never send.
+Communication is deployed and draft-only; human review and sent status remain
+metadata actions and never transmit a message.
 
 ## Reuse existing Azure resources
 
@@ -123,10 +194,9 @@ follow into a new worktree. A durable copy of the current `.env` and `config.jso
 is retained at `/Users/jeremiahgutherie/Development/pennstatelefty-org/dev-day-demo/.azure/claims-demo/`
 in the primary checkout. Copy those existing ignored files into each fresh
 worktree without committing them; do not copy transient `.env.lock` files.
-Deployment instructions and
-focused templates are in `docs/azure-deployment.md`. No secrets belong in Git.
-Use separate branches/worktrees for the two fresh sessions. Coordinate any
-shared Azure changes and deploy/pin updates rather than deploying concurrently.
+Deployment instructions and focused templates are in `docs/azure-deployment.md`.
+No secrets belong in Git. Coordinate shared Azure changes and Foundry
+default/version updates rather than deploying concurrently.
 Leave Claim Assessor v3 and hosted Policy Checker v1 selected until a replacement
 has passed acceptance. This checkpoint requires no foundation deployment.
 
@@ -209,9 +279,9 @@ test token acquisition. It is not the selected UI version; leave consumers on
 verified v3. Hosted Policy Checker v2/v3 failed builds are also not selected.
 
 Remaining integration work: actual Copilot Studio connector onboarding and
-supervision; Communications agent; executable Risk Analyst skill integration;
-browser telemetry ingestion proof and hosted exporter recovery. Evaluation data
-generation remains deferred for collaborative Q&A authoring.
+supervision; executable Risk Analyst skill integration; browser telemetry
+ingestion proof and hosted exporter recovery. Evaluation data generation remains
+deferred for collaborative Q&A authoring.
 
 ## Deployment recovery notes
 

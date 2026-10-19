@@ -6,7 +6,8 @@ from azure.search.documents import SearchClient
 from azure.storage.blob import BlobServiceClient
 from openai import OpenAI
 
-from .database import SqlClaimsStore, connection_string, connector
+from .communication import CommunicationHandler
+from .database import InMemoryCommunicationStore, SqlClaimsStore, connection_string, connector
 from .evidence import BlobEvidenceReader, EvidenceAssessment, LocalEvidenceReader, VisionClient
 from .handler import ClaimHandler
 from .knowledge import SearchPolicyKnowledge
@@ -26,6 +27,11 @@ class Runtime:
         self.project: AIProjectClient | None = None
         self.agent_client: OpenAI | None = None
         self.handler: ClaimHandler | None = None
+        self.communication_handler: CommunicationHandler | None = None
+        self.communication_store: SqlClaimsStore | InMemoryCommunicationStore = (
+            InMemoryCommunicationStore()
+        )
+        self.communication_client: OpenAI | None = None
         self.evidence = EvidenceAssessment(LocalEvidenceReader())
         if settings.mode == "local":
             self.service = DemoService()
@@ -37,6 +43,7 @@ class Runtime:
                 )
             )
         )
+        self.communication_store = self.store
         self.credential = ManagedIdentityCredential(client_id=settings.runtime_client_id)
         if settings.storage_account:
             self.blobs = BlobServiceClient(
@@ -71,6 +78,13 @@ class Runtime:
             self.handler = ClaimHandler(
                 self.agent_client, "claim-assessor", settings.assessor_version,
             )
+            if settings.communication_version:
+                self.communication_client = self.project.get_openai_client(
+                    agent_name="communication", timeout=180, max_retries=0,
+                )
+                self.communication_handler = CommunicationHandler(
+                    self.communication_client, "communication", settings.communication_version,
+                )
         self.search = SearchClient(
             settings.search_endpoint,
             settings.search_index,
@@ -94,6 +108,8 @@ class Runtime:
     def close(self) -> None:
         if self.agent_client is not None:
             self.agent_client.close()
+        if self.communication_client is not None:
+            self.communication_client.close()
         if self.project is not None:
             self.project.close()
         if self.vision_client is not None:
