@@ -12,37 +12,41 @@ This customer-neutral, 25-minute narrative connects three presenters through one
 
 ## Build and deploy script (GitHub Copilot)
 
-### Requirement 1: Automated late-report and police-report check
+### Product Owner - drafts user story from business requirement
 
-The system automatically checks each claim against the Section 4 claims-process rules. It flags claims reported more than 30 days after the loss, and theft or vandalism claims with no police report. The handler sees the result and only confirms or follows up.
+Using **New Chat** in the GitHub Copilot App in **Plan** mode, with `PennStateLefty/dev-day-demo` as context:
 
-### Requirement 2: Automated exclusion screening
+1. Draft the first user story. Prompt:
 
-The system automatically screens each claim statement against the policy exclusions in Section 3. It surfaces a possible exclusion with the quoted policy wording and routes the claim to a human adjuster.
-
-### Product Owner: draft user stories from the business requirements
-
-Use **New Chat** in the GitHub Copilot App in **Plan** mode, with `PennStateLefty/dev-day-demo` as context.
-
-1. Prompt:
-
-   > Draft as user story: Requirement 1: Automated late-report and police-report check. The system automatically checks each claim against the Section 4 claims-process rules. It flags claims reported more than 30 days after the loss, and theft or vandalism claims with no police report. The handler sees the result and only confirms or follows up.
+   > Draft a user story with acceptance criteria for Requirement 1: Enhance claims review with claim cards and image viewer. Claim fixture cards replace the raw claim selector with a drop-down list that includes the claim ID, loss date and review status. An evidence image viewer shows evidence images as thumbnails and lets the handler click on an image to zoom in.
    >
-   > Create as GitHub issue for requirement 1 in: https://github.com/PennStateLefty/dev-day-demo
-
-2. Prompt:
-
-   > Draft as user story: Requirement 2: Automated exclusion screening. The system automatically screens each claim statement against the policy exclusions in Section 3. It surfaces a possible exclusion with the quoted policy wording and routes the claim to a human adjuster.
+2. Create the first GitHub issue. Prompt:
    >
-   > Create as GitHub issue for requirement 2 in: https://github.com/PennStateLefty/dev-day-demo
+   > Create the GitHub issue from the user story you just drafted, with a clear title, user-focused description, and acceptance criteria, in: https://github.com/PennStateLefty/dev-day-demo
+
+3. Draft the second user story. Prompt:
+
+   > Draft a user story with acceptance criteria for Requirement 2: Automated exclusion screening. The system automatically screens each claim statement against the policy exclusions in Section 3. It surfaces a possible exclusion with the quoted policy wording and routes the claim to a human adjuster.
+   >
+   > Do not use any emojis.
+
+4. Create the second GitHub issue. Prompt:
+
+   > Create the GitHub issue from the user story you just drafted, with a clear title, user-focused description, and acceptance criteria, in: https://github.com/PennStateLefty/dev-day-demo
 
 ### Developer: implement the user story
 
-1. Select the new issue in the Copilot App and ask the developer agent to plan the implementation (Plan mode).
+1. Select the new issue in the Copilot App and ask the developer agent to plan the implementation using Plan mode:
+
+   > Plan how to implement this issue.
+
 2. Review the plan. If unit tests are not explicitly included, prompt to include them.
-3. Prompt to start the implementation.
-4. Run the application to verify the change.
-5. Create a PR to the `main` branch and include the verification screenshots as part of the acceptance criteria.
+3. Prompt to start implementation, then downgrade to **Auto -> Efficiency**:
+
+   > Implement this feature completely.
+
+4. Run the application for verification.
+5. Create a PR to the `main` branch summarizing the changes made, and include verification screenshots as part of the acceptance criteria.
 6. Add `@copilot` as a Reviewer.
 
 ### Handoff
