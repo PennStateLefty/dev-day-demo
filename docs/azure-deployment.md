@@ -23,6 +23,18 @@ active hosted Policy Checker v1, whose new exporter deployment remains blocked.
 Application Insights retains this content under its existing retention/access
 settings; use synthetic data only.
 
+**Communication agent, October 19:** immutable agent `communication` v2 is
+published using `claims-chat` (source SHA-256
+`ed867c13f62a64e6096bb454c7ab5b84d637614ae15938c41326c8399f7d54fd`). The
+application rollout is complete: SQL migration, version pin, authenticated
+check-then-draft, persisted evidence metadata, and Application Insights traces
+were verified live. The synthetic draft remains unreviewed and unsent; no
+message transport is configured. Direct normal, missing-evidence,
+unavailable-image and conflicting-information scenarios passed schema and
+customer-wording validation. Foundry MCP reads/invocations return 403 for the
+MCP tool identity; local `DefaultAzureCredential` was used for publishing and
+invocation.
+
 Revision 16 live acceptance: all four pinned Claim Assessor v3 workflows return
 200 with real tool evidence. Claims 001/002/004 complete image analysis and
 recommend human review; 003 returns `no_evidence` and `request_information`.
@@ -160,11 +172,13 @@ Actual subscription ARM validation succeeded and the foundation was created.
 No matching policy deny has been demonstrated. Subscription Owner does not imply
 access to parent management-group policy.
 
-The Claim Assessor definition and advisory Risk Analyst Skill/Toolbox publisher are
-source-controlled. Claim Assessor v3 and Risk Analyst Skill v1 are published, but
-tool access and the Risk Analyst Toolbox are not verified. Policy Checker and
-Communication definitions, browser sign-in and model gateway connection/policies
-remain end-to-end demo work, not platform provisioning blockers.
+The Claim Assessor, Communication agent, and advisory Risk Analyst
+Skill/Toolbox publisher are source-controlled. Claim Assessor v3, Communication
+agent v2, and Risk Analyst Skill v1 are published. Communication API/SQL/UI
+rollout and Policy Checker direct/APIM paths are verified; Risk Analyst tool
+access and its Toolbox, interactive browser sign-in, and actual Copilot Studio
+connector onboarding/supervision remain end-to-end demo work, not platform
+provisioning blockers.
 The serverless provider failure does not prove its root cause was capacity or NSP
 compatibility. Before the approved public-mode change, runtime managed identity
 could list the protected Blob containers, but operator Blob and SQL requests
@@ -180,9 +194,9 @@ Resolve target agent-version/region compatibility before claiming specialist rea
 
 ### Image evidence setup and handler-check runbook
 
-**Deployed on 2026-10-16; agent-driven acceptance remains blocked.** The three
-images are uploaded and byte-verified in private Blob, the five reviewed SQL
-changes are applied, and initializer replay leaves no fixture drift.
+**Deployed and accepted on revision 16.** The three images are uploaded and
+byte-verified in private Blob, the five reviewed SQL changes are applied, and
+initializer replay leaves no fixture drift.
 `claims-vision` runs `gpt-6-luna` version `2026-09-22`, GlobalStandard capacity
 10, with `NoAutoUpgrade`. Claim Assessor v3 is published and pinned; the API/UI
 revision uses the existing `claims` project. Foundry Workflows is not used.
@@ -274,10 +288,13 @@ to environment variables. Empty values keep the feature unconfigured:
 | `CLAIMS_VISION_MODEL_VERSION` | Verified pinned model version `2026-09-22` |
 | `FOUNDRY_PROJECT_ENDPOINT` | Existing project endpoint |
 | `CLAIM_ASSESSOR_AGENT_VERSION` | Explicit version published from the updated claim-ID-only definition |
+| `CLAIM_COMMUNICATION_AGENT_VERSION` | Optional explicit Communication agent version; required to enable communication drafting |
 
-Set the first three together and the final two together. The API uses its runtime
-managed identity for Blob, model and Foundry calls; there are no API keys or
-automatic fallback models. Azure returned the deployment alias `claims-vision`
+Set the three vision values together and set the Foundry endpoint and Claim
+Assessor version together. The optional Communication version is enabled only
+after publishing that immutable agent version. The API uses its runtime managed
+identity for Blob, model and Foundry calls; there are no API keys or automatic
+fallback models. Azure returned the deployment alias `claims-vision`
 in the live Responses `model` field, not the model/version name. The client
 accepts only the configured alias or exact family/version identifier. Verify the
 alias's actual family, version and `NoAutoUpgrade` through ARM on deployment;
@@ -361,15 +378,16 @@ For live acceptance, record asset hashes, model/deployment and prompt versions,
 agent version, actual tool result and final recommendation for all four claims.
 Compare semantic observations with the evaluation dataset, not exact wording.
 Assert no automatic coverage decision, invented citation, hidden-damage diagnosis
-or claimant classification. The full path is not verified until real private
-Blob access, image inference, APIM tool authentication and response extraction
-all succeed.
+or claimant classification. These acceptance checks are complete on revision 16: real private Blob access,
+image inference, APIM tool authentication and response extraction all succeed
+for the four synthetic claims. The semantic misses above remain disclosed
+limitations and are not release blockers.
 
 ### Local specialist publisher
 
 The current Claim Assessor definition is published as agent version 3. Its APIM
-tool access remains blocked on a cached pre-grant token despite the authorized
-caller allowlist and API role updates. Risk Analyst Skill v1 was
+tool path has passed live validation on application revision 16; the earlier
+cached-token authorization failure is resolved. Risk Analyst Skill v1 was
 published from `agents/risk-analyst/SKILL.md` and read back successfully; the
 downloaded source and digest match the checked-in file. The project currently has
 no Risk Analyst-specific Toolbox connection, so no Risk Analyst Toolbox was
@@ -436,9 +454,22 @@ Both inbound Studio and downstream Claims MCP use tenant-only bearer admission;
 outbound managed-identity choices remain separate.
 
 The hosted agent's Toolbox v1 connection is app-only and uses the published
-agent's Agentic Identity. It is already deployed and must not be replaced as a
-workaround for unrelated build issues. Its creation command is retained here for
-reproducibility:
+agent's Agentic Identity. The live project also contains Toolbox v2 with
+`claims-policy-studio-project-identity` (`ProjectManagedIdentity`) and audience
+`api://<Claims API audience>`, and Toolbox v3 with
+`claims-policy-studio-project-identity-audience` (`ProjectManagedIdentity`)
+and the bare Claims API audience GUID. All three connections point to the same
+`/claims-tools/mcp/` APIM endpoint. The toolbox default pointer is still v1;
+the separate Studio-facing APIM route explicitly targets v3. Version 2 is not
+selected by either current consumer path, but its connection/version has not
+been deleted. The existing `claims-tools` API is not replaced. Each Toolbox
+version contains only `lookup_policy`. Both inbound Studio and downstream
+Claims MCP use tenant-only bearer admission; outbound managed-identity choices
+remain separate.
+
+The hosted agent's connection is already deployed and must not be replaced as
+a workaround for unrelated build issues. Its creation command is retained here
+for reproducibility:
 
 ```sh
 AZURE_DEV_USER_AGENT=microsoft_foundry_skill azd ai connection create claims-policy-agent-identity \
@@ -524,7 +555,7 @@ check, not a silent fallback.
 |---|---|---|
 | Foundry | AIServices S0 account, project, system-assigned identities | Yes |
 | Specialist chat model | Deployment `claims-chat`: `gpt-4.1-mini`, `2025-04-14`, GlobalStandard, capacity 10 | Deployed; retained for Claim Assessor |
-| API-owned image model | Selected `gpt-6-luna`; catalog lists `2026-09-22` | Not deployed; endpoint, image inference and access require verification/approval |
+| API-owned image model | `claims-vision`: `gpt-6-luna` `2026-09-22`, GlobalStandard capacity 10, NoAutoUpgrade | Deployed; API-owned image inference and managed-identity access verified |
 | Embedding model | Deployment `claims-embedding`: `text-embedding-3-small`, version `1`, GlobalStandard, capacity 10 | Yes |
 | Foundry IQ / Search | Basic, one replica and partition; identity authentication | Seeded semantic index and extractive knowledge source/base; live citations resolve to protected Blob |
 | API Management | New classic Developer, one unit, managed identity | REST/native MCP readiness, initialize/list/call and missing-token denial pass; model gateway unfinished |
@@ -532,7 +563,7 @@ check, not a silent fallback.
 | Synthetic documents | StorageV2 Standard LRS Hot; private `policies` and `evidence` containers | Synthetic policies uploaded; live managed-identity reads and NSP diagnostic delivery verified |
 | Application hosting | Container Apps environment, user-assigned runtime identity | Real-image azd revision deployed with HTTPS ingress, Entra API middleware and working public liveness |
 | Container registry | ACR Basic; admin authentication disabled | Yes |
-| Telemetry | Log Analytics, 30-day retention and 1 GB/day cap; Application Insights | Yes; no application instrumentation yet |
+| Telemetry | Log Analytics, 30-day retention and 1 GB/day cap; Application Insights | API request/dependency and explicit synthetic agent-content traces verified; browser ingestion and hosted Policy Checker exporter update remain unverified |
 | Network boundary | Explicit `public-demo` mode for presentations; `enforced-perimeter` remains the template default | Public endpoints/firewalls permit Entra-authenticated access; the demo NSP and its four associations are retired by the provision hook |
 | API catalog | API Center Free | Empty service; no contract registration |
 | Copilot Studio | Supervisor and optional SQL-backed data analyst | Separate presenter-owned work; not deployed here |
@@ -748,11 +779,12 @@ The hosted UI implements tenant-specific MSAL authorization-code/PKCE sign-in,
 session-storage caching and same-origin authenticated API requests. Public
 `/auth-config` exposes only mode, tenant/client IDs and the delegated scope, never
 credentials. Claims are not fetched until sign-in; configuration/token failures
-are visible and never retry anonymously. The updated Azure UI uses the application `/workflow` handler to invoke one pinned
-specialist, not Foundry Workflows or the local fixture orchestrator. It does not
-fabricate specialist communication. This source change is deployed, but full
-handler acceptance remains blocked as described above.
-The browser flow has not been exercised against real Entra registrations.
+are visible and never retry anonymously. The updated Azure UI uses the application `/workflow` handler to invoke the
+pinned Claim Assessor, not Foundry Workflows or the local fixture orchestrator.
+It also offers the separate Communication draft action after successful checks.
+Live handler/draft acceptance and the persisted record were verified. The
+browser flow has not been exercised interactively against real Entra
+registrations.
 
 Provisioning no longer implicitly runs local data-plane initialization: an
 operator's Azure-bound proxy address may differ from the configured `/32`.
@@ -809,13 +841,15 @@ delivery and denied operator-source requests were verified separately.
 
 ## Gates before declaring the phase complete
 
-Do not run `azd up` as though this foundation deploys a working demo. Live application
-registration/caller grants and browser sign-in verification, three versioned
-specialists, advisory skill, model
-gateway configuration and API Center registration remain unfinished.
-Application packaging, Entra middleware, SQL migration/seed tools and IQ
-initialization and direct/gateway protocol smoke are verified in Azure; browser
-and agent orchestration still need their own end-to-end proof.
+Do not run `azd up` as though this foundation deploys a working demo. Interactive
+browser sign-in, Risk Analyst skill integration, actual Copilot Studio connector
+onboarding/supervision, model gateway configuration and API Center registration
+remain unfinished.
+Application packaging, Entra middleware, SQL migration/seed tools, IQ
+initialization, direct/gateway protocol smoke, and Communication check-then-draft
+persistence and Application Insights trace ingestion are verified in Azure.
+Interactive browser sign-in and agent orchestration still need their own
+end-to-end proof.
 
 Provisioning additionally requires the approved exception deadline/owner,
 operator IP and administrator metadata, APIM publisher metadata,

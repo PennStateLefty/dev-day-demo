@@ -4,6 +4,7 @@ import logging
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
+from threading import Lock
 from typing import Annotated
 
 import httpx
@@ -22,9 +23,24 @@ from starlette.responses import JSONResponse, Response
 
 from .agents import LocalDemoOrchestrator
 from .auth import EntraAuthMiddleware
+from .communication import (
+    CommunicationError,
+    create_communication_record,
+)
 from .evidence import validate_image
 from .handler import HandlerError
-from .models import Artifact, Claim, EnrichedAssessment, HandlerResult, Policy, WorkflowResult
+from .models import (
+    Artifact,
+    Claim,
+    CommunicationDraftRequest,
+    CommunicationRecord,
+    CommunicationReviewRequest,
+    CommunicationRunResult,
+    EnrichedAssessment,
+    HandlerResult,
+    Policy,
+    WorkflowResult,
+)
 from .runtime import Runtime
 from .search_rest import KnowledgeError
 from .service import ResourceNotFound
@@ -36,6 +52,8 @@ telemetry_enabled = configure_telemetry()
 settings = Settings.from_environment()
 runtime = Runtime(settings)
 service = runtime.service
+verified_workflows: dict[str, HandlerResult | WorkflowResult] = {}
+verified_workflows_lock = Lock()
 mcp = FastMCP("Synthetic Claims Demo", mask_error_details=True)
 
 
@@ -279,19 +297,27 @@ def assess_claim(claim_id: str) -> EnrichedAssessment:
 
 @app.post("/api/claims/{claim_id}/workflow", response_model=WorkflowResult | HandlerResult)
 def run_workflow(claim_id: str) -> WorkflowResult | HandlerResult:
+    with verified_workflows_lock:
+        verified_workflows.pop(claim_id, None)
     try:
         claim = service.get_claim(claim_id)
         if settings.mode == "local":
             result = LocalDemoOrchestrator(service).run(claim_id)
-            return WorkflowResult(
+            workflow = WorkflowResult(
                 assessment=runtime.evidence.assess(service, claim_id),
                 response_draft=result.response_draft,
             )
+            with verified_workflows_lock:
+                verified_workflows[claim_id] = workflow
+            return workflow
         if runtime.handler is None:
             raise HTTPException(status_code=409, detail=(
                 "Pinned Claim Assessor is not configured; no fixture fallback was used."
             ))
-        return runtime.handler.run(claim)
+        result = runtime.handler.run(claim)
+        with verified_workflows_lock:
+            verified_workflows[claim_id] = result
+        return result
     except ResourceNotFound as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     except (HandlerError, APIError, ValidationError, ValueError) as error:
@@ -305,6 +331,123 @@ def run_workflow(claim_id: str) -> WorkflowResult | HandlerResult:
         raise HTTPException(status_code=503, detail=(
             "Pinned agent result could not be verified; no fixture fallback was used."
         )) from error
+
+
+@app.post(
+    "/api/claims/{claim_id}/communications/draft",
+    response_model=CommunicationRunResult,
+)
+def draft_communication(
+    claim_id: str,
+    request: CommunicationDraftRequest,
+) -> CommunicationRunResult:
+    try:
+        claim = service.get_claim(claim_id)
+        with verified_workflows_lock:
+            verified = verified_workflows.get(claim_id)
+        if verified is None or verified.assessment.assessment_id != request.assessment_id:
+            raise HTTPException(
+                status_code=409,
+                detail="Run handler checks successfully before drafting this customer update.",
+            )
+        if settings.mode == "local":
+            if not isinstance(verified, WorkflowResult):
+                raise HTTPException(
+                    status_code=409,
+                    detail="The completed local handler-check result is unavailable.",
+                )
+            record = create_communication_record(
+                claim, verified.assessment, verified.response_draft.body
+            )
+            stored = runtime.communication_store.create_communication(record)
+            return CommunicationRunResult(
+                assessment=verified.assessment, communication=stored
+            )
+
+        if not isinstance(verified, HandlerResult):
+            raise HTTPException(
+                status_code=409,
+                detail="The completed Claim Assessor result is unavailable.",
+            )
+        if runtime.communication_handler is None:
+            raise HTTPException(
+                status_code=409,
+                detail="Pinned Communication agent is not configured; "
+                "no fixture fallback was used.",
+            )
+        draft = runtime.communication_handler.run(claim, verified)
+        record = create_communication_record(
+            claim,
+            verified.assessment,
+            draft.body,
+            recommendation_artifact_ids=verified.recommendation.supporting_artifact_ids,
+        )
+        stored = runtime.communication_store.create_communication(record)
+        return CommunicationRunResult(
+            assessment=verified.assessment,
+            recommendation=verified.recommendation,
+            communication=stored,
+            agent_name=runtime.communication_handler.name,
+            agent_version=runtime.communication_handler.version,
+        )
+    except ResourceNotFound as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except (HandlerError, CommunicationError, APIError, ValidationError, ValueError) as error:
+        if isinstance(error, (HandlerError, CommunicationError)):
+            logger.exception("Communication draft validation failed: %s", error)
+        else:
+            logger.error(
+                "Communication draft failed (%s)",
+                type(error).__name__,
+                extra={"upstream_request_id": getattr(error, "request_id", None)},
+            )
+        raise HTTPException(
+            status_code=503,
+            detail="Verified communication draft could not be produced; no record was saved.",
+        ) from error
+
+
+@app.get(
+    "/api/claims/{claim_id}/communications",
+    response_model=list[CommunicationRecord],
+)
+def list_communications(claim_id: str) -> list[CommunicationRecord]:
+    try:
+        service.get_claim(claim_id)
+        return runtime.communication_store.list_communications(claim_id)
+    except ResourceNotFound as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@app.post(
+    "/api/communications/{communication_id}/review",
+    response_model=CommunicationRecord,
+)
+def review_communication(
+    communication_id: str,
+    request: CommunicationReviewRequest,
+) -> CommunicationRecord:
+    try:
+        return runtime.communication_store.mark_communication_reviewed(
+            communication_id, request.reviewer
+        )
+    except LookupError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+
+
+@app.post(
+    "/api/communications/{communication_id}/mark-sent",
+    response_model=CommunicationRecord,
+)
+def mark_communication_sent(communication_id: str) -> CommunicationRecord:
+    try:
+        return runtime.communication_store.mark_communication_sent(communication_id)
+    except LookupError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
 
 
 ui_dist = Path(__file__).resolve().parents[4] / "src/apps/claims-handler-ui/dist"

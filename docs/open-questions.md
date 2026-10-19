@@ -30,9 +30,11 @@ missing-token requests receive 401. Actual Copilot Studio connector onboarding
 remains unverified. Do not weaken the policy or add duplicate grants.
 APIM's managed-identity policy authenticates
 APIM to Foundry; it does not pass through the Studio caller's identity.
-Communications, executable Risk Analyst skill integration, model gateway and complete presenter workflows
-remain unverified. No further unrelated access changes or authentication
-bypasses are authorized by this status.
+Communication is deployed and its persisted check-then-draft path is verified.
+Executable Risk Analyst skill integration, actual Copilot Studio connector
+onboarding/supervision, model gateway and complete presenter workflows remain
+unverified. No further unrelated access changes or authentication bypasses are
+authorized by this status.
 
 New Foundry's model playground disables **Save as agent** in the current Central US project with a regional-support message. This does not establish every agent API's availability; confirm the required versioned-agent features and target region before implementing the specialists.
 
@@ -64,8 +66,9 @@ New Foundry's model playground disables **Save as agent** in the current Central
    The hosted Policy Checker v1 has returned cited evidence directly, while its
    separate Studio-facing v3 APIM route now passes protocol acceptance. Claim Assessor v3 is pinned
    and the runtime consumer endpoint honors versions. Actual tool-result extraction
-   and all four agent recommendations pass. Communications and executable skill
-   integration remain acceptance gates. Do not substitute another
+   and all four Claim Assessor recommendations pass. Communication's live
+   check-then-draft persistence also passes; executable skill integration
+   remains an acceptance gate. Do not substitute another
    model or bypass permission checks to make the demo appear successful.
    Exact damage recognition is not a demo gate. Keep policies simple for the
    developer/PM/QA audience: essential authentication and human-review boundaries,

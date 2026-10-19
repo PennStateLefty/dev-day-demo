@@ -22,7 +22,42 @@ The shared data/tool service remains Python/FastAPI. Presenter ownership is:
 - An optional Copilot Studio Claims Data Analyst uses bounded SQL-backed tools, not Fabric or unrestricted generated SQL.
 - Deterministic validators handle completeness and relationship rules, and deterministic fixtures support contract tests without replacing the hosted-agent demo path.
 
-The application service presents stable assessment and policy-knowledge capabilities. A versioned Foundry Toolbox packages the bounded read-only tools. The hosted Policy Checker remains pinned to Toolbox v1 and connects directly; its internal agent-to-Toolbox MCP traffic does not traverse APIM. That Toolbox version uses the hosted agent's Agentic Identity for its `lookup_policy` connection to the existing Entra-protected Claims MCP route. A separate APIM MCP route for Copilot Studio targets Toolbox v3, whose downstream connection uses the Foundry project's managed identity. APIM uses its own managed identity to call Foundry. The operator selected tenant-only demo bearer admission at APIM and the API: verify signature, expiry and tenant issuer/`tid`, without audience, caller, scope or app-role gates. Keep the existing `claims-tools` route intact. There is no per-user OBO path. Copilot Studio adds conversational intake and downstream workflow rather than duplicating Foundry assessment or response logic.
+The application service presents stable assessment and policy-knowledge capabilities. A versioned Foundry Toolbox packages the bounded read-only tools. The hosted Policy Checker consumes its pinned Toolbox v1 directly; that Toolbox's downstream `lookup_policy` connection uses the hosted agent's Agentic Identity to reach the existing Entra-protected Claims MCP route through APIM. The separate Copilot Studio MCP route at `/policy-checker-tools/mcp` targets Toolbox v3. APIM validates the caller's tenant JWT, then calls Foundry with APIM's managed identity. Toolbox v3 in turn calls the Claims MCP route through APIM using the Foundry project's managed identity. The APIM Claims MCP route validates and forwards that token to the API; it does not replace it with APIM's identity. No caller identity is forwarded from Studio to Foundry, and there is no per-user OBO path. The operator selected tenant-only demo bearer admission at APIM and the API: verify signature, expiry and tenant issuer/`tid`, without audience, caller, scope or app-role gates. Keep the existing `claims-tools` route intact. Copilot Studio adds conversational intake and downstream workflow rather than duplicating Foundry assessment or response logic.
+
+The live project currently has three RemoteTool project connections for the
+same `claims-tools/mcp/` APIM endpoint. Toolbox v1 references
+`claims-policy-agent-identity` (`AgenticIdentityToken`) with audience
+`api://<Claims API audience>`; v2 references
+`claims-policy-studio-project-identity` (`ProjectManagedIdentity`) with the
+same audience format; and v3 references
+`claims-policy-studio-project-identity-audience` (`ProjectManagedIdentity`)
+with the bare Claims API audience GUID. The toolbox default-version pointer
+remains v1, while the Studio APIM backend explicitly targets immutable version
+3. These are version-specific connections, not three different MCP servers.
+Version 2 is not selected by the current hosted-agent or Studio routes and
+appears to be an earlier audience-format experiment; it has not been removed.
+
+The explicit Communication draft endpoint runs the pinned Claim Assessor to obtain
+verified claim evidence and recommendation, then invokes a separate pinned
+Communication prompt agent with no tools. It validates plain customer wording and
+stores claim, assessment, citation and artifact IDs separately as record metadata.
+The wording guard rejects internal references, unsupported claims that review
+already occurred, and promises of follow-up or timing.
+After `Run handler checks` succeeds, the UI offers a separate draft action. The
+API uses the verified result retained for that completed run, so drafting invokes
+only Communication and does not rerun Claim Assessor. The UI exposes review and
+mark-sent actions; those actions only persist the handler-entered reviewer and
+UTC timestamps. No message transport is configured, and the existing `/workflow`
+route remains unchanged.
+
+The next demo increment is intentionally separate from this UI path: create
+additional synthetic Foundry IQ knowledge sources (for example, procedural
+checklists and planning references) for Copilot Studio to use while planning.
+Do not attach these new sources to the existing claims-handler UI, Claim Assessor
+workflow, or Communication draft endpoint. A separate reusable
+communication-template Skill is intended to be pre-created in Foundry and then
+manually added to the Communication agent as a visible Foundry authoring demo;
+template selection and Skill invocation are not application-code integrations.
 
 ### Image evidence and handler checks
 
@@ -77,7 +112,13 @@ Vision accuracy remains a disclosed demo limitation.
 Risk Analyst Skill v1 is published but its consuming-agent/tool integration is
 not verified. Policy Checker Toolbox v1 and hosted agent v1 return cited evidence
 directly; the separate APIM-to-Toolbox-v3 route passes initialize/list/call.
-Communications and actual Copilot Studio connector/supervision remain next work.
+Communication agent v2 is published and its four direct draft scenarios pass
+output/wording validation. The API/SQL/UI rollout is deployed to the existing
+claims demo, and live check-then-draft verified a persisted, unreviewed,
+unsent record with separate evidence metadata. No customer message was sent.
+Application Insights recorded the draft request and Communication traces.
+Interactive browser sign-in remains unverified. Actual Copilot Studio
+connector/supervision also remains next work.
 API prompt, completion and tool content is explicitly logged for this synthetic
 demo, without credentials/headers. Browser ingestion and the hosted agent's
 exporter update remain unverified; its new versions failed remote build.

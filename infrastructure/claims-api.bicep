@@ -35,6 +35,8 @@ param visionModelVersion string = ''
 @description('Optional pinned Claim Assessor; configure endpoint and version together.')
 param foundryProjectEndpoint string = ''
 param claimAssessorVersion string = ''
+@description('Optional pinned Communication agent; requires the Foundry project endpoint.')
+param claimCommunicationVersion string = ''
 param applicationInsightsName string
 
 resource insights 'Microsoft.Insights/components@2020-02-02' existing = {
@@ -59,6 +61,7 @@ var runtimeSettings = {
   CLAIMS_VISION_MODEL_VERSION: visionModelVersion
   FOUNDRY_PROJECT_ENDPOINT: foundryProjectEndpoint
   CLAIM_ASSESSOR_AGENT_VERSION: claimAssessorVersion
+  CLAIM_COMMUNICATION_AGENT_VERSION: claimCommunicationVersion
   OTEL_SERVICE_NAME: 'claims-api'
   CLAIMS_LOG_DEMO_CONTENT: 'true'
   AZURE_EXPERIMENTAL_ENABLE_GENAI_TRACING: 'false'

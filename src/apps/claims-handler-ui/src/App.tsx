@@ -1,5 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import type { Claim, WorkflowResult } from "./types";
+import type {
+  Claim,
+  CommunicationRecord,
+  CommunicationRunResult,
+  WorkflowResult,
+} from "./types";
 import type { Session } from "./auth";
 import EvidencePreview from "./EvidencePreview";
 
@@ -12,11 +17,18 @@ export default function App({ session }: { session: Session }) {
   const [selectedId, setSelectedId] = useState("");
   const [result, setResult] = useState<WorkflowResult | null>(null);
   const activeRun = useRef<AbortController | null>(null);
+  const activeCommunicationRun = useRef<AbortController | null>(null);
   const [loadingClaims, setLoadingClaims] = useState(true);
   const [running, setRunning] = useState(false);
+  const [drafting, setDrafting] = useState(false);
+  const [communicationRecords, setCommunicationRecords] = useState<CommunicationRecord[]>([]);
+  const [reviewer, setReviewer] = useState("");
   const [error, setError] = useState("");
 
-  useEffect(() => () => activeRun.current?.abort(), []);
+  useEffect(() => () => {
+    activeRun.current?.abort();
+    activeCommunicationRun.current?.abort();
+  }, []);
   useEffect(() => {
     const controller = new AbortController();
     session.request("/api/claims", { signal: controller.signal })
@@ -35,6 +47,29 @@ export default function App({ session }: { session: Session }) {
       .finally(() => setLoadingClaims(false));
     return () => controller.abort();
   }, [session]);
+
+  useEffect(() => {
+    if (!selectedId) {
+      setCommunicationRecords([]);
+      return;
+    }
+    const controller = new AbortController();
+    session.request(`/api/claims/${selectedId}/communications`, { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`Communications request failed (${response.status}).`);
+        return (await response.json()) as CommunicationRecord[];
+      })
+      .then((records) => {
+        if (!controller.signal.aborted) setCommunicationRecords(records);
+      })
+      .catch((reason: unknown) => {
+        if (reason instanceof DOMException && reason.name === "AbortError") return;
+        if (!controller.signal.aborted) {
+          setError(reason instanceof Error ? reason.message : "Unable to load communication records.");
+        }
+      });
+    return () => controller.abort();
+  }, [selectedId, session]);
 
   async function runAssessment() {
     if (!selectedId || activeRun.current) return;
@@ -63,6 +98,72 @@ export default function App({ session }: { session: Session }) {
         activeRun.current = null;
         setRunning(false);
       }
+    }
+  }
+
+  async function draftCommunication() {
+    if (!selectedId || !result || activeCommunicationRun.current) return;
+    const controller = new AbortController();
+    activeCommunicationRun.current = controller;
+    setDrafting(true);
+    setError("");
+    try {
+      const response = await session.request(
+        `/api/claims/${selectedId}/communications/draft`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ assessmentId: result.assessment.assessmentId }),
+          signal: controller.signal,
+        },
+      );
+      if (!response.ok) {
+        const detail = (await response.json()) as { detail?: string };
+        throw new Error(detail.detail ?? `Communication request failed (${response.status}).`);
+      }
+      const data = (await response.json()) as CommunicationRunResult;
+      if (!controller.signal.aborted) {
+        setCommunicationRecords((current) => [
+          data.communication,
+          ...current.filter((item) => item.communicationId !== data.communication.communicationId),
+        ]);
+      }
+    } catch (reason: unknown) {
+      if (!controller.signal.aborted) {
+        setError(reason instanceof Error ? reason.message : "Unable to draft communication.");
+      }
+    } finally {
+      if (activeCommunicationRun.current === controller) {
+        activeCommunicationRun.current = null;
+        setDrafting(false);
+      }
+    }
+  }
+
+  async function updateCommunication(
+    communicationId: string,
+    action: "review" | "mark-sent",
+  ) {
+    if (action === "review" && !reviewer.trim()) {
+      setError("Enter the handler name or identifier before recording review.");
+      return;
+    }
+    setError("");
+    try {
+      const response = await session.request(`/api/communications/${communicationId}/${action}`, {
+        method: "POST",
+        headers: action === "review" ? { "Content-Type": "application/json" } : undefined,
+        body: action === "review" ? JSON.stringify({ reviewer: reviewer.trim() }) : undefined,
+      });
+      if (!response.ok) {
+        const detail = (await response.json()) as { detail?: string };
+        throw new Error(detail.detail ?? `Communication update failed (${response.status}).`);
+      }
+      const updated = (await response.json()) as CommunicationRecord;
+      setCommunicationRecords((current) =>
+        current.map((item) => item.communicationId === updated.communicationId ? updated : item));
+    } catch (reason: unknown) {
+      setError(reason instanceof Error ? reason.message : "Unable to update communication record.");
     }
   }
 
@@ -107,10 +208,14 @@ export default function App({ session }: { session: Session }) {
               onChange={(event) => {
                 activeRun.current?.abort();
                 activeRun.current = null;
+                activeCommunicationRun.current?.abort();
+                activeCommunicationRun.current = null;
                 setSelectedId(event.target.value);
                 setResult(null);
+                setCommunicationRecords([]);
                 setError("");
                 setRunning(false);
+                setDrafting(false);
               }}
               disabled={!claims.length}
             >
@@ -187,6 +292,75 @@ export default function App({ session }: { session: Session }) {
               </ul>
             ) : (
               <p className="muted">No deterministic review flags were raised.</p>
+            )}
+            <section className="communication-action" aria-labelledby="communication-action-heading">
+              <h3 id="communication-action-heading">Customer communication</h3>
+              <p className="muted">
+                Generate a separate draft from these completed handler checks. Nothing is sent.
+              </p>
+              <button
+                type="button"
+                onClick={draftCommunication}
+                disabled={drafting}
+              >
+                {drafting ? "Generating draft…" : "Draft customer communication"}
+              </button>
+            </section>
+            {communicationRecords.length > 0 && (
+              <section className="panel communications" aria-labelledby="communications-heading">
+                <div className="section-heading">
+                  <div>
+                    <p className="eyebrow">05 / Communication records</p>
+                    <h2 id="communications-heading">Customer update drafts</h2>
+                  </div>
+                  <span className="draft-warning">No messages are sent by this demo.</span>
+                </div>
+                <label className="reviewer-label" htmlFor="communication-reviewer">
+                  Handler name or identifier for review
+                </label>
+                <input
+                  id="communication-reviewer"
+                  value={reviewer}
+                  onChange={(event) => setReviewer(event.target.value)}
+                  maxLength={200}
+                  placeholder="Enter reviewer"
+                />
+                {communicationRecords.map((record) => (
+                  <article className="communication-record" key={record.communicationId}>
+                    <p>{record.body}</p>
+                    <small>
+                      Record {record.communicationId} · assessment {record.assessmentId} · created{" "}
+                      {new Date(record.createdAt).toLocaleString()}
+                    </small>
+                    <p className="record-links">
+                      Linked claim: {record.claimId} · citations: {record.citationIds.join(", ") || "none"} ·
+                      {" "}artifacts: {record.artifactIds.join(", ") || "none"}
+                    </p>
+                    {record.reviewedAt ? (
+                      <small>Reviewed by {record.reviewedBy} · {new Date(record.reviewedAt).toLocaleString()}</small>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => updateCommunication(record.communicationId, "review")}
+                        disabled={!reviewer.trim()}
+                      >
+                        Record human review
+                      </button>
+                    )}
+                    {record.sentAt ? (
+                      <small>Marked sent by handler · {new Date(record.sentAt).toLocaleString()}</small>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => updateCommunication(record.communicationId, "mark-sent")}
+                        disabled={!record.reviewedAt}
+                      >
+                        Mark sent (records only)
+                      </button>
+                    )}
+                  </article>
+                ))}
+              </section>
             )}
             {assessment.imageAnalysis && <section aria-label="Model image observations">
               <h3>Model image observations — advisory</h3>
