@@ -1,6 +1,6 @@
 # Demo outline
 
-This planned customer-neutral, 25-minute narrative connects three presenters through one synthetic FNOL scenario. The local claims-handler experience, deterministic review workflow, citations, response draft, Azure foundation, private image evidence and API-owned vision analysis are deployed. Claim Assessor v3 and Risk Analyst Skill v1 are published, but their complete specialist paths are not ready: Foundry still uses a cached pre-grant API token, image semantic checks have misses, and the Risk Analyst Toolbox has no configured MCP project connection. Do not present either specialist as ready until explicit-version invocation, tool access, and synthetic regression pass. The system never autonomously approves, denies, settles, or pays a claim.
+This customer-neutral, 25-minute narrative connects three presenters through one synthetic FNOL scenario. The claims-handler experience, deterministic review workflow, citations, draft-only Communication path, Azure foundation, private image evidence and API-owned vision analysis are deployed. Claim Assessor v3 and Policy Checker v1 have passed their pinned invocation paths; the Studio-facing APIM route to Toolbox v3 passes authenticated MCP initialize/list/call. Communication v2 has passed live check-then-draft persistence. Risk Analyst Skill v1 has no configured MCP Toolbox, and actual Copilot Studio connector onboarding/supervision remains unverified. The system never autonomously approves, denies, settles, pays, or sends a claim communication.
 
 ## Presenter handoffs
 
@@ -10,15 +10,54 @@ This planned customer-neutral, 25-minute narrative connects three presenters thr
 | Manage and evaluate (Azure / Foundry) | Foundry as the control plane for versioned agents, tools, and knowledge. | Show the Claim Assessor, Policy Checker and Communication specialists only after deployment and explicit-version invocation work. Publish a prompt change and evaluate against a fixed synthetic set; prove selecting a tested version before calling it rollback. Ground policy evidence through IQ and govern shared tools through APIM. Risk Analyst remains advisory. Hand off tested endpoints and contracts to Studio. |
 | Extend (Copilot Studio) | Studio owns supervision and capability extension. | Build the supervisor that gathers missing information, invokes governed capabilities and presents results for human review. An optional Claims Data Analyst uses bounded SQL tools, not Fabric or arbitrary generated SQL. Prove cross-tenant Entra connectivity; any authentication fallback requires a compatibility result and explicit decision. |
 
+## Build and deploy script (GitHub Copilot)
+
+### Requirement 1: Automated late-report and police-report check
+
+The system automatically checks each claim against the Section 4 claims-process rules. It flags claims reported more than 30 days after the loss, and theft or vandalism claims with no police report. The handler sees the result and only confirms or follows up.
+
+### Requirement 2: Automated exclusion screening
+
+The system automatically screens each claim statement against the policy exclusions in Section 3. It surfaces a possible exclusion with the quoted policy wording and routes the claim to a human adjuster.
+
+### Product Owner: draft user stories from the business requirements
+
+Use **New Chat** in the GitHub Copilot App in **Plan** mode, with `PennStateLefty/dev-day-demo` as context.
+
+1. Prompt:
+
+   > Draft as user story: Requirement 1: Automated late-report and police-report check. The system automatically checks each claim against the Section 4 claims-process rules. It flags claims reported more than 30 days after the loss, and theft or vandalism claims with no police report. The handler sees the result and only confirms or follows up.
+   >
+   > Create as GitHub issue for requirement 1 in: https://github.com/PennStateLefty/dev-day-demo
+
+2. Prompt:
+
+   > Draft as user story: Requirement 2: Automated exclusion screening. The system automatically screens each claim statement against the policy exclusions in Section 3. It surfaces a possible exclusion with the quoted policy wording and routes the claim to a human adjuster.
+   >
+   > Create as GitHub issue for requirement 2 in: https://github.com/PennStateLefty/dev-day-demo
+
+### Developer: implement the user story
+
+1. Select the new issue in the Copilot App and ask the developer agent to plan the implementation (Plan mode).
+2. Review the plan. If unit tests are not explicitly included, prompt to include them.
+3. Prompt to start the implementation.
+4. Run the application to verify the change.
+5. Create a PR to the `main` branch and include the verification screenshots as part of the acceptance criteria.
+6. Add `@copilot` as a Reviewer.
+
+### Handoff
+
+This concludes the requirement, plan, implementation, test and code review flow. Transition to the Foundry hosted agent demo.
+
 ## Shared architecture for the demo
 
 - Copilot Studio supervises three explicit-version Foundry specialists: Claim Assessor, Policy Checker and Communication. The local deterministic orchestrator is not the hosted supervisor.
 - The new image-evidence source shows supplied synthetic PNGs for claims 001, 002 and 004; 003 stays without evidence. Preview is not inference. **Run handler checks** is an ordinary API application handler, not Foundry Workflows. Claim Assessor gets a claim ID; its API tool owns private Blob retrieval and the `gpt-6-luna` image call. Show deterministic checks, model observations and agent recommendations separately. No visible damage in the obstructed fourth image is not proof of no damage.
 - The claims dropdown shows each claim ID, loss date and session-local handler-check progress. “Checks complete” still requires human review and is not an approval or a completed human review. Browse evidence with the thumbnail strip, then open a photo to zoom and close the viewer to return to that photo. Image browsing does not run handler checks or model inference.
-- The vision model, private images and revised agent v3 are deployed, but this is not a completed cloud demo: successful outbound authorization and actual tool-result extraction must pass. Missed damage details are disclosed model limitations, not demo blockers; no fine-tuning or further vision optimization is planned. Local unavailable/fixture results are not live specialist evidence. The observed token expires 2026-10-17 15:02:43 UTC; refresh and successful authorization must be observed before using the handler button as a demo.
+- The vision model, private images and revised Claim Assessor v3 are deployed; live handler checks use verified tool output. Missed damage details are disclosed model limitations, not demo blockers; no fine-tuning or further vision optimization is planned. Local unavailable/fixture results are not live specialist evidence.
 - Deterministic checks enforce completeness and support contract tests.
 - Foundry IQ/Azure AI Search is a shared knowledge source; agents consume it through a stable connection rather than having the knowledge embedded in each prompt.
-- A versioned Foundry Toolbox/APIM MCP surface exposes the assessment workflow to Copilot Studio; the exact backend/authentication path must be proven in the target tenant.
+- The hosted Policy Checker consumes Toolbox v1 directly. The separate APIM MCP route for Copilot Studio targets Toolbox v3; APIM authenticates to Foundry with its managed identity, and Toolbox v3 calls Claims MCP through APIM with the Foundry project's managed identity. Actual connector onboarding remains to be verified.
 - Studio collects information and coordinates specialist calls without reimplementing their assessment, interpretation or drafting logic.
 - The published Risk Analyst Skill is advisory only. It may inspect synthetic consistency/history after its bounded Toolbox is configured and verified. Production fraud scoring, risk classification and approve/deny outcomes remain excluded; no upstream code or prompts are imported.
 

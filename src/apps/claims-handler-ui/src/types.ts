@@ -66,10 +66,32 @@ export interface ResponseDraft {
   humanReviewRequired: true;
 }
 
+export interface CommunicationRecord {
+  communicationId: string;
+  claimId: string;
+  assessmentId: string;
+  citationIds: string[];
+  artifactIds: string[];
+  body: string;
+  createdAt: string;
+  reviewedBy: string | null;
+  reviewedAt: string | null;
+  sentAt: string | null;
+  humanReviewRequired: true;
+}
+
 export interface WorkflowResult {
   assessment: Assessment;
   responseDraft?: ResponseDraft;
   recommendation?: Recommendation;
   agentName?: string;
   agentVersion?: string;
+}
+
+export interface CommunicationRunResult {
+  assessment: Assessment;
+  recommendation?: Recommendation | null;
+  communication: CommunicationRecord;
+  agentName?: string | null;
+  agentVersion?: string | null;
 }

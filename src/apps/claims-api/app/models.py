@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from datetime import date, datetime
 from typing import Literal
 
@@ -144,6 +145,61 @@ class ResponseDraft(DemoModel):
     human_review_required: Literal[True] = True
 
 
+class CommunicationText(DemoModel):
+    body: str = Field(min_length=1, max_length=10000)
+
+
+class CommunicationRecord(DemoModel):
+    communication_id: str = Field(pattern=r"^com-[a-f0-9-]{36}$")
+    claim_id: str = Field(pattern=r"^clm-[a-z0-9-]+$")
+    assessment_id: str = Field(pattern=r"^asm-[a-z0-9-]+$")
+    citation_ids: list[str] = Field(default_factory=list)
+    artifact_ids: list[str] = Field(default_factory=list)
+    body: str = Field(min_length=1, max_length=10000)
+    created_at: datetime
+    reviewed_by: str | None = Field(
+        default=None, min_length=1, max_length=200, pattern=r".*\S.*"
+    )
+    reviewed_at: datetime | None = None
+    sent_at: datetime | None = None
+    human_review_required: Literal[True] = True
+
+    @model_validator(mode="after")
+    def validate_lifecycle(self) -> CommunicationRecord:
+        if self.created_at.tzinfo is None:
+            raise ValueError("Communication creation time must include a timezone.")
+        if (self.reviewed_by is None) != (self.reviewed_at is None):
+            raise ValueError("Reviewer identity and review time must be recorded together.")
+        if self.reviewed_at is not None and self.reviewed_at.tzinfo is None:
+            raise ValueError("Communication review time must include a timezone.")
+        if self.sent_at is not None and self.reviewed_at is None:
+            raise ValueError("A communication cannot be marked sent before human review.")
+        if self.sent_at is not None and self.sent_at.tzinfo is None:
+            raise ValueError("Communication sent time must include a timezone.")
+        if any(not re.fullmatch(r"cit-[a-z0-9-]+", item) for item in self.citation_ids):
+            raise ValueError("Communication citation IDs must be valid.")
+        if any(not re.fullmatch(r"art-[a-z0-9-]+", item) for item in self.artifact_ids):
+            raise ValueError("Communication artifact IDs must be valid.")
+        if len(self.citation_ids) != len(set(self.citation_ids)):
+            raise ValueError("Communication citation IDs must be unique.")
+        if len(self.artifact_ids) != len(set(self.artifact_ids)):
+            raise ValueError("Communication artifact IDs must be unique.")
+        return self
+
+
+class CommunicationReviewRequest(DemoModel):
+    reviewer: str = Field(min_length=1, max_length=200, pattern=r".*\S.*")
+
+    @model_validator(mode="after")
+    def normalize_reviewer(self) -> CommunicationReviewRequest:
+        self.reviewer = self.reviewer.strip()
+        return self
+
+
+class CommunicationDraftRequest(DemoModel):
+    assessment_id: str = Field(pattern=r"^asm-[a-z0-9-]+$")
+
+
 class PartObservation(DemoModel):
     part: str = Field(min_length=1, max_length=100)
     damage: str = Field(min_length=1, max_length=1000)
@@ -210,3 +266,11 @@ class HandlerResult(DemoModel):
 class WorkflowResult(DemoModel):
     assessment: EnrichedAssessment | Assessment
     response_draft: ResponseDraft
+
+
+class CommunicationRunResult(DemoModel):
+    assessment: EnrichedAssessment | Assessment
+    recommendation: AgentRecommendation | None = None
+    communication: CommunicationRecord
+    agent_name: str | None = None
+    agent_version: str | None = None

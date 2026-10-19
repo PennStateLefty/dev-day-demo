@@ -99,79 +99,32 @@ Before copying or adapting an asset:
 - Add tests with every imported or adapted behavior.
 - Make all assumptions visible in documentation.
 
-## Target repository structure
+## Repository layout
 
-Create this initial structure, adjusting only when there is a concrete technical reason:
+The tree below describes the implemented source layout, not the original
+initialization scaffold. Empty placeholder directories are not retained in Git;
+add a directory when its first real implementation or artifact is created.
 
 ```text
 agentic-sdlc-demo/
-├── .devcontainer/
-├── .github/
-│   ├── agents/
-│   ├── instructions/
-│   ├── prompts/
-│   ├── skills/
-│   └── workflows/
-├── ado/
-│   ├── sample-requirements/
-│   └── work-item-templates/
-├── src/
-│   ├── apps/
-│   │   ├── claims-handler-ui/
-│   │   └── claims-api/
-│   ├── agents/
-│   │   ├── claims-assessor/
-│   │   ├── policy-checker/
-│   │   ├── evidence-reviewer/
-│   │   └── customer-response/
-│   ├── mcp/
-│   │   └── claims-server/
-│   ├── packages/
-│   │   ├── claims-domain/
-│   │   └── claims-contracts/
-│   └── tests/
-│       ├── unit/
-│       ├── integration/
-│       ├── contract/
-│       └── evaluation/
-├── data/
-│   ├── policies/
-│   ├── claims/
-│   ├── artifacts/
-│   ├── evaluation/
-│   └── schemas/
-├── infrastructure/
-│   ├── modules/
-│   └── environments/
-├── copilot-studio/
-│   ├── instructions/
-│   ├── connection-reference/
-│   └── deployment-notes/
-├── evaluations/
-│   ├── datasets/
-│   ├── evaluators/
-│   └── baselines/
-├── docs/
-│   ├── architecture.md
-│   ├── demo-script.md
-│   ├── domain-model.md
-│   ├── source-assessment.md
-│   ├── threat-model.md
-│   └── decisions/
-├── scripts/
-│   ├── bootstrap/
-│   ├── validation/
-│   └── demo/
-├── .env.example
-├── .gitignore
-├── ASSET-PROVENANCE.md
-├── CONTRIBUTING.md
-├── LICENSE
-├── README.md
-├── SECURITY.md
-├── THIRD-PARTY-NOTICES.md
-└── azure.yaml
+├── .github/workflows/
+├── agents/                     # Foundry agent and skill source
+├── data/                        # Synthetic fixtures and schemas
+├── docs/                        # Architecture, deployment, handoff and demo
+├── evaluations/datasets/         # Synthetic regression datasets
+├── infrastructure/              # Bicep, APIM policies and SQL
+├── scripts/agents/               # Foundry publishers and invokers
+├── scripts/validation/           # Azure and infrastructure checks
+├── src/apps/                     # Claims API, handler UI and Policy Checker
+├── src/tests/                    # Unit, contract and evaluation tests
+├── azure.yaml
+└── Dockerfile
 ```
+
+Agent code is under repository-root `agents/`, rather than `src/agents/`.
+Shared domain behavior, API contracts and MCP tools remain in the Claims API;
+they have not been split into `src/packages/` or a standalone `src/mcp/`
+service. Copilot Studio and Azure DevOps assets are not checked in yet.
 
 ## Technology preferences
 
@@ -386,7 +339,8 @@ Instead, create:
 - A lifecycle comparison note covering repository artifacts versus Copilot Studio solution artifacts
 - A checklist for validating the connection in the target environment
 
-Place these materials under `copilot-studio/`.
+Create `copilot-studio/` when these materials are authored; do not keep an empty
+placeholder directory.
 
 ## Phase 10: operating narrative
 

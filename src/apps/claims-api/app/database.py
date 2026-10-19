@@ -4,10 +4,12 @@ import json
 import re
 from collections.abc import Callable
 from contextlib import closing
+from datetime import UTC, datetime
+from threading import Lock
 from typing import Protocol, Self
 from uuid import UUID
 
-from .models import Artifact, Claim, Policy
+from .models import Artifact, Claim, CommunicationRecord, Policy
 
 
 class Cursor(Protocol):
@@ -103,10 +105,116 @@ class SqlClaimsStore:
             connection.commit()
             return str(row[0])
 
+    def create_communication(self, record: CommunicationRecord) -> CommunicationRecord:
+        with closing(self.connect()) as connection, closing(connection.cursor()) as cursor:
+            cursor.execute(
+                "EXEC claims.CreateCommunication @payload = ?",
+                (record.model_dump_json(by_alias=True),),
+            )
+            rows = cursor.fetchall()
+            if not rows:
+                raise RuntimeError("Communication creation returned no stored record.")
+            connection.commit()
+            return CommunicationRecord.model_validate_json(str(rows[0][0]))
+
+    def list_communications(self, claim_id: str) -> list[CommunicationRecord]:
+        rows = self._query(
+            "SELECT payload FROM claims.Communication "
+            "WHERE claim_id = ? ORDER BY created_at DESC, communication_id",
+            (claim_id,),
+        )
+        return [CommunicationRecord.model_validate_json(str(row[0])) for row in rows]
+
+    def mark_communication_reviewed(
+        self, communication_id: str, reviewer: str
+    ) -> CommunicationRecord:
+        return self._communication_action(
+            "EXEC claims.MarkCommunicationReviewed @communication_id = ?, @reviewer = ?",
+            (communication_id, reviewer),
+        )
+
+    def mark_communication_sent(self, communication_id: str) -> CommunicationRecord:
+        return self._communication_action(
+            "EXEC claims.MarkCommunicationSent @communication_id = ?",
+            (communication_id,),
+        )
+
+    def _communication_action(
+        self, statement: str, params: tuple[object, ...]
+    ) -> CommunicationRecord:
+        with closing(self.connect()) as connection, closing(connection.cursor()) as cursor:
+            cursor.execute(statement, params)
+            rows = cursor.fetchall()
+            if not rows:
+                raise LookupError("Communication record was not found.")
+            status, payload_value = rows[0]
+            if status == "missing":
+                raise LookupError("Communication record was not found.")
+            if status != "updated":
+                raise ValueError(
+                    "Communication lifecycle action is not valid in its current state."
+                )
+            if not payload_value:
+                raise RuntimeError("Communication lifecycle action returned no stored record.")
+            connection.commit()
+            return CommunicationRecord.model_validate_json(str(payload_value))
+
     def probe(self) -> None:
         rows = self._query("SELECT TOP (1) claim_id FROM claims.Claim ORDER BY claim_id")
         if not rows:
             raise RuntimeError("SQL is reachable but synthetic claims have not been initialized.")
+
+
+class InMemoryCommunicationStore:
+    """Ephemeral local-mode store; Azure mode uses the SQL-backed store."""
+
+    def __init__(self) -> None:
+        self._records: dict[str, CommunicationRecord] = {}
+        self._lock = Lock()
+
+    def create_communication(self, record: CommunicationRecord) -> CommunicationRecord:
+        with self._lock:
+            if record.communication_id in self._records:
+                raise ValueError("Communication record already exists.")
+            self._records[record.communication_id] = record
+            return record
+
+    def list_communications(self, claim_id: str) -> list[CommunicationRecord]:
+        with self._lock:
+            return sorted(
+                (record for record in self._records.values() if record.claim_id == claim_id),
+                key=lambda record: (record.created_at, record.communication_id),
+                reverse=True,
+            )
+
+    def mark_communication_reviewed(
+        self, communication_id: str, reviewer: str
+    ) -> CommunicationRecord:
+        with self._lock:
+            record = self._records.get(communication_id)
+            if record is None:
+                raise LookupError("Communication record was not found.")
+            if record.reviewed_at is not None:
+                raise ValueError("Communication record has already been reviewed.")
+            updated = record.model_copy(update={
+                "reviewed_by": reviewer,
+                "reviewed_at": datetime.now(UTC),
+            })
+            self._records[communication_id] = updated
+            return updated
+
+    def mark_communication_sent(self, communication_id: str) -> CommunicationRecord:
+        with self._lock:
+            record = self._records.get(communication_id)
+            if record is None:
+                raise LookupError("Communication record was not found.")
+            if record.reviewed_at is None:
+                raise ValueError("Communication must be reviewed before it can be marked sent.")
+            if record.sent_at is not None:
+                raise ValueError("Communication record has already been marked sent.")
+            updated = record.model_copy(update={"sent_at": datetime.now(UTC)})
+            self._records[communication_id] = updated
+            return updated
 
 
 def payload(record: Claim | Policy | Artifact) -> str:

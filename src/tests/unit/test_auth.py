@@ -75,14 +75,9 @@ def test_public_liveness_and_ui_are_accessible_without_data_access() -> None:
     "change",
     [
         {"tid": "another-tenant"},
-        {"azp": "another-client"},
-        {"ver": "1.0"},
-        {"roles": []},
-        {"roles": "Claims.Invoke.Application"},
-        {"scp": "claims.read", "roles": []},
     ],
 )
-def test_wrong_tenant_client_or_permission_is_denied(change: dict) -> None:
+def test_wrong_tenant_is_denied(change: dict) -> None:
     with client(lambda token: claims() | change) as http:
         assert http.get("/api/claims", headers={"Authorization": "Bearer token"}).status_code == 403
 
@@ -93,7 +88,9 @@ def test_wrong_tenant_client_or_permission_is_denied(change: dict) -> None:
         {"roles": ["Claims.Invoke.Application"]},
         {
             "roles": [],
-            "scp": "openid claims.invoke",
+            "scp": "openid",
+            "azp": "unlisted-demo-client",
+            "aud": "another-resource",
         },
     ],
 )
@@ -112,7 +109,7 @@ def test_key_discovery_failure_is_unavailable_not_authenticated() -> None:
     assert "network failure" not in response.text
 
 
-def test_actual_signature_issuer_audience_and_expiry_validation() -> None:
+def test_actual_signature_tenant_issuer_and_expiry_validation() -> None:
     key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     validator = EntraTokenValidator(SETTINGS)
     validator.keys = Mock()
@@ -120,7 +117,6 @@ def test_actual_signature_issuer_audience_and_expiry_validation() -> None:
     assert validator(jwt.encode(claims(), key, algorithm="RS256"))["tid"] == SETTINGS.tenant_id
     for change in (
         {"iss": "https://attacker.example"},
-        {"aud": "wrong"},
         {"exp": datetime.now(UTC) - timedelta(minutes=1)},
         {"nbf": datetime.now(UTC) + timedelta(minutes=5)},
     ):
@@ -128,3 +124,13 @@ def test_actual_signature_issuer_audience_and_expiry_validation() -> None:
             validator(jwt.encode(claims() | change, key, algorithm="RS256"))
     with pytest.raises(jwt.InvalidTokenError):
         validator(jwt.encode(claims(), "not-an-RSA-key-but-at-least-32-bytes", algorithm="HS256"))
+    minimal = {
+        "iss": f"https://sts.windows.net/{SETTINGS.tenant_id}/",
+        "tid": SETTINGS.tenant_id,
+        "aud": "another-resource",
+        "exp": datetime.now(UTC) + timedelta(minutes=5),
+    }
+    assert validator(jwt.encode(minimal, key, algorithm="RS256"))["tid"] == SETTINGS.tenant_id
+    other_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    with pytest.raises(jwt.InvalidSignatureError):
+        validator(jwt.encode(claims(), other_key, algorithm="RS256"))

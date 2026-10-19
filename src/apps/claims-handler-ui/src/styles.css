@@ -20,6 +20,7 @@ body {
 }
 
 button,
+input,
 select {
   font: inherit;
 }
@@ -166,6 +167,15 @@ select {
   min-width: 250px;
   max-width: 100%;
   padding: 11px 36px 11px 12px;
+  color: var(--navy);
+  background: #fff;
+  border: 1px solid #bac7d9;
+  border-radius: 8px;
+}
+
+input {
+  min-width: 240px;
+  padding: 10px 12px;
   color: var(--navy);
   background: #fff;
   border: 1px solid #bac7d9;
@@ -462,6 +472,22 @@ select:focus-visible {
   background: #ffebe8;
 }
 
+.communication-action {
+  margin-top: 22px;
+  padding: 18px;
+  background: #f4f8ff;
+  border: 1px solid #d8e5f8;
+  border-radius: 12px;
+}
+
+.communication-action h3 {
+  margin: 0 0 6px;
+}
+
+.communication-action p {
+  margin-bottom: 12px;
+}
+
 .citation {
   padding: 14px 0;
   border-top: 1px solid var(--line);
@@ -503,6 +529,40 @@ select:focus-visible {
   color: #8b5b06;
   font-size: 0.82rem;
   font-weight: 700;
+}
+
+.communications {
+  margin-top: 18px;
+}
+
+.reviewer-label {
+  display: block;
+  margin: 18px 0 8px;
+  font-weight: 700;
+}
+
+.communication-record {
+  display: grid;
+  gap: 10px;
+  padding: 18px 0;
+  border-top: 1px solid var(--line);
+}
+
+.communication-record > p:first-child {
+  max-width: 800px;
+  margin-bottom: 0;
+  line-height: 1.6;
+}
+
+.communication-record small,
+.record-links {
+  color: var(--muted);
+  font-size: 0.82rem;
+  overflow-wrap: anywhere;
+}
+
+.record-links {
+  margin: 0;
 }
 
 footer {

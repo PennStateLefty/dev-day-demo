@@ -231,8 +231,45 @@ def response_fixture(claim_id="clm-demo-001"):
     response = SimpleNamespace(
         status="completed", id="response-1", output_text=json.dumps(recommendation),
         output=[SimpleNamespace(model_dump=lambda item=item: item) for item in items],
+        model_dump=lambda **kwargs: {
+            "status": "completed", "id": "response-1",
+            "output": items, "output_text": json.dumps(recommendation),
+        },
     )
     return response, items
+
+
+def test_foundry_openapi_output_preserves_actual_assessment_evidence() -> None:
+    response, items = response_fixture()
+    items[0]["type"] = "openapi_call"
+    items[1]["type"] = "openapi_call_output"
+    items[1]["output"] = json.dumps({"response": items[1]["output"]})
+    result = handler_result(
+        response, DemoService().get_claim("clm-demo-001"), "claim-assessor", "3",
+    )
+    assert result.assessment.claim_id == "clm-demo-001"
+    assert result.assessment.image_analysis.status == "completed"
+
+
+@pytest.mark.parametrize("envelope", [{}, {"response": None}, {"response": {"claimId": "x"}}])
+def test_foundry_openapi_output_rejects_invalid_envelopes(envelope) -> None:
+    response, items = response_fixture()
+    items[0]["type"] = "openapi_call"
+    items[1]["type"] = "openapi_call_output"
+    items[1]["output"] = json.dumps(envelope)
+    with pytest.raises(HandlerError, match="JSON response string"):
+        handler_result(
+            response, DemoService().get_claim("clm-demo-001"), "claim-assessor", "3",
+        )
+
+
+def test_duplicate_assessment_call_is_not_hidden_by_matching_call_id() -> None:
+    response, items = response_fixture()
+    response.output.append(SimpleNamespace(model_dump=lambda: items[0]))
+    with pytest.raises(HandlerError, match="unique"):
+        handler_result(
+            response, DemoService().get_claim("clm-demo-001"), "claim-assessor", "3",
+        )
 
 
 def test_pinned_handler_uses_actual_tool_evidence_and_claim_id_only() -> None:
@@ -246,6 +283,7 @@ def test_pinned_handler_uses_actual_tool_evidence_and_claim_id_only() -> None:
     assert result.agent_version == "3"
     call = client.responses.create.call_args.kwargs
     assert call["extra_body"]["agent_reference"]["version"] == "3"
+    assert "text" not in call
     assert isinstance(call["input"], str)
     assert "input_image" not in json.dumps(call)
     assert client.responses.create.call_count == 1

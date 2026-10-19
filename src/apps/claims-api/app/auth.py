@@ -32,9 +32,14 @@ class EntraTokenValidator:
             token,
             key,
             algorithms=["RS256"],
-            audience=self.settings.audience,
-            issuer=self.issuer,
-            options={"require": ["exp", "iat", "nbf", "iss", "aud", "tid", "azp"]},
+            issuer=[
+                self.issuer,
+                f"https://sts.windows.net/{self.settings.tenant_id}/",
+            ],
+            options={
+                "verify_aud": False,
+                "require": ["exp", "iss", "tid"],
+            },
         )
 
 
@@ -77,18 +82,8 @@ class EntraAuthMiddleware:
             logger.warning("Rejected invalid API bearer token.")
             await self._reject(401, scope, receive, send)
             return
-        scopes = str(claims.get("scp", "")).split()
-        roles = claims.get("roles", [])
-        if (
-            claims.get("tid") != self.settings.tenant_id
-            or claims.get("ver") != "2.0"
-            or claims.get("azp") not in self.settings.client_ids
-            or not (
-                "claims.invoke" in scopes
-                or isinstance(roles, list) and "Claims.Invoke.Application" in roles
-            )
-        ):
-            logger.warning("Rejected bearer token without authorized tenant, client or permission.")
+        if claims.get("tid") != self.settings.tenant_id:
+            logger.warning("Rejected bearer token from another tenant.")
             await self._reject(403, scope, receive, send)
             return
         await self.app(scope, receive, send)

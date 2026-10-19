@@ -26,6 +26,7 @@ class Settings:
     vision_model_version: str = ""
     foundry_endpoint: str = ""
     assessor_version: str = ""
+    communication_version: str = ""
 
     @classmethod
     def from_environment(cls, values: Mapping[str, str] | None = None) -> Settings:
@@ -93,6 +94,7 @@ class Settings:
                 raise ValueError("Vision requires an approved Azure HTTPS /openai/v1 endpoint.")
         foundry = values.get("FOUNDRY_PROJECT_ENDPOINT", "")
         version = values.get("CLAIM_ASSESSOR_AGENT_VERSION", "")
+        communication_version = values.get("CLAIM_COMMUNICATION_AGENT_VERSION", "")
         if bool(foundry) != bool(version):
             raise ValueError("Foundry project endpoint and explicit agent version are required.")
         if foundry and not re.fullmatch(
@@ -101,6 +103,12 @@ class Settings:
             raise ValueError("Invalid Foundry project endpoint.")
         if version and not re.fullmatch(r"[1-9][0-9]*", version):
             raise ValueError("The Claim Assessor version must be an explicit positive integer.")
+        if communication_version and (
+            not foundry or not re.fullmatch(r"[1-9][0-9]*", communication_version)
+        ):
+            raise ValueError(
+                "The Communication Agent requires a Foundry endpoint and explicit positive version."
+            )
         return cls(
             mode=mode,
             tenant_id=tenant,
@@ -118,4 +126,5 @@ class Settings:
             vision_model_version=vision[2],
             foundry_endpoint=foundry,
             assessor_version=version,
+            communication_version=communication_version,
         )
