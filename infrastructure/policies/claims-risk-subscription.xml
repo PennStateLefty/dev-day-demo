@@ -1,0 +1,17 @@
+<policies>
+  <inbound>
+    <base />
+    <set-header name="Authorization" exists-action="delete" />
+    <authentication-managed-identity resource="__API_AUDIENCE__" ignore-error="false" />
+    <set-header name="x-correlation-id" exists-action="override">
+      <value>@(context.RequestId.ToString())</value>
+    </set-header>
+    <set-header name="Ocp-Apim-Subscription-Key" exists-action="delete" />
+    <set-query-parameter name="subscription-key" exists-action="delete" />
+  </inbound>
+  <backend>
+    <forward-request buffer-response="false" timeout="120" />
+  </backend>
+  <outbound><base /></outbound>
+  <on-error><base /></on-error>
+</policies>

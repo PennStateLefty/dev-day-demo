@@ -1,0 +1,20 @@
+{
+  "name": "claim-escalation-packets-source",
+  "kind": "searchIndex",
+  "description": "Only the three synthetic supervisor escalation snapshots for clm-demo-001, clm-demo-002, and clm-demo-004. Each document contains one complete claim packet. Match the exact claim ID. Includes captured upstream agent recommendations, text image observations, limitations and provenance; not live claim history or a coverage decision.",
+  "searchIndexParameters": {
+    "searchIndexName": "claim-escalation-packets",
+    "semanticConfigurationName": "packet-semantic",
+    "searchFields": [{"name": "title"}, {"name": "content"}],
+    "sourceDataFields": [
+      {"name": "packet_id"},
+      {"name": "claim_id"},
+      {"name": "title"},
+      {"name": "content"},
+      {"name": "source_document"},
+      {"name": "captured_at_utc"},
+      {"name": "snapshot_sha256"},
+      {"name": "packet_sha256"}
+    ]
+  }
+}

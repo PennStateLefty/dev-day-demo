@@ -25,11 +25,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def migration_batches(sql: str) -> list[str]:
-    return [
-        batch.strip()
-        for batch in re.split(r"(?im)^\s*GO\s*(?:--.*)?$", sql)
-        if batch.strip()
-    ]
+    return [batch.strip() for batch in re.split(r"(?im)^\s*GO\s*(?:--.*)?$", sql) if batch.strip()]
 
 
 def runtime_grants(client_id: str, legacy_principal_id: str | None = None) -> str:
@@ -74,14 +70,35 @@ GRANT EXECUTE ON OBJECT::claims.MarkCommunicationSent TO claims_runtime;
 """
 
 
+def risk_grants(client_id: str) -> str:
+    sid = "0x" + UUID(client_id).bytes_le.hex()
+    return f"""
+IF DATABASE_PRINCIPAL_ID(N'claims_risk_identity') IS NULL
+    CREATE USER claims_risk_identity WITH SID = {sid}, TYPE = E;
+IF NOT EXISTS (
+    SELECT 1 FROM sys.database_principals
+    WHERE name = N'claims_risk_identity' AND sid = {sid} AND type = 'E'
+)
+    THROW 50014, 'Risk principal differs; explicit identity migration required.', 1;
+GRANT EXECUTE ON OBJECT::claims.GetClaimRiskFacts TO claims_risk_identity;
+GRANT VIEW DEFINITION ON OBJECT::claims.GetClaimRiskFacts TO claims_risk_identity;
+"""
+
+
 def initialize(
     connect: Connect,
     client_id: str,
     fixtures: DemoService,
     *,
     legacy_principal_id: str | None = None,
+    risk_client_id: str | None = None,
 ) -> dict[str, object]:
     grants = runtime_grants(client_id, legacy_principal_id)
+    risk_access = risk_grants(risk_client_id) if risk_client_id else None
+    if risk_client_id and UUID(risk_client_id) == UUID(client_id):
+        raise ValueError(
+            "Risk data requires a dedicated identity, not the claims runtime identity."
+        )
     with closing(connect()) as connection, closing(connection.cursor()) as cursor:
         try:
             cursor.execute("SET XACT_ABORT ON; SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;")
@@ -158,6 +175,8 @@ IF OBJECT_ID(N'dbo.ClaimsMigration', N'U') IS NULL
                         cursor.execute(insert, record)
                         inserted += 1
             cursor.execute(grants)
+            if risk_access:
+                cursor.execute(risk_access)
             connection.commit()
             return {"passed": True, "migrations_applied": applied, "records_inserted": inserted}
         except (SqlError, AzureError, ValueError, OSError):
@@ -168,6 +187,10 @@ IF OBJECT_ID(N'dbo.ClaimsMigration', N'U') IS NULL
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--managed-identity", action="store_true")
+    parser.add_argument(
+        "--risk-client-id",
+        help="Dedicated DAB managed identity client ID; grants only risk procedure access.",
+    )
     parser.add_argument(
         "--repair-legacy-principal-sid",
         action="store_true",
@@ -195,6 +218,7 @@ def main() -> int:
             legacy_principal_id=os.environ["AZURE_RUNTIME_PRINCIPAL_ID"]
             if arguments.repair_legacy_principal_sid
             else None,
+            risk_client_id=arguments.risk_client_id,
         )
     except (KeyError, ValueError, OSError, SqlError, AzureError) as error:
         logging.error("SQL initialization failed (%s); no runtime fallback.", type(error).__name__)

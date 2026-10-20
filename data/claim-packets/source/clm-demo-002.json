@@ -1,0 +1,197 @@
+{
+  "synthetic": true,
+  "humanReviewRequired": true,
+  "capturedAtUtc": "2026-10-20T17:08:50.811192+00:00",
+  "captureStartedAtUtc": "2026-10-20T17:08:36.842371+00:00",
+  "sourceApi": "https://ca-claims-snlo25badmmpc.livelyfield-abf14243.centralus.azurecontainerapps.io",
+  "claim": {
+    "claimId": "clm-demo-002",
+    "customerId": "cust-demo-one",
+    "policyId": "pol-demo-auto",
+    "vehicleId": "veh-demo-one",
+    "lossDate": "2024-09-14",
+    "reportedDriverId": "drv-demo-two",
+    "claimantStatement": "A delivery trip ended in a collision. A preliminary repair estimate is attached.",
+    "artifactIds": [
+      "art-demo-estimate-002",
+      "art-demo-photo-002"
+    ],
+    "repairEstimate": {
+      "amount": 7200.0,
+      "currency": "USD"
+    }
+  },
+  "artifacts": [
+    {
+      "artifactId": "art-demo-estimate-002",
+      "claimId": "clm-demo-002",
+      "artifactType": "repair_estimate",
+      "receivedAt": "2024-09-15T12:00:00Z",
+      "contentRef": null,
+      "duplicateOfArtifactId": null,
+      "description": "Synthetic estimate summary: preliminary body repair estimate of USD 7,200; review required.",
+      "provenance": null
+    },
+    {
+      "artifactId": "art-demo-photo-002",
+      "claimId": "clm-demo-002",
+      "artifactType": "damage_photo",
+      "receivedAt": "2024-09-15T12:00:00Z",
+      "contentRef": "data/artifacts/images/clm-demo-002/collision.png",
+      "duplicateOfArtifactId": null,
+      "description": "User-provided AI-generated synthetic collision evidence; not a real claimant photograph.",
+      "provenance": "user_provided_ai_generated"
+    }
+  ],
+  "policy": {
+    "policyId": "pol-demo-auto",
+    "insuredCustomerId": "cust-demo-one",
+    "status": "active",
+    "effectiveDate": "2024-03-15",
+    "expirationDate": "2025-03-15",
+    "coveredVehicleIds": [
+      "veh-demo-one"
+    ],
+    "listedDriverIds": [
+      "drv-demo-one"
+    ],
+    "coverages": [
+      {
+        "coverageId": "collision",
+        "description": "Synthetic training wording for collision-related policy retrieval."
+      },
+      {
+        "coverageId": "comprehensive",
+        "description": "Synthetic training wording for non-collision perils, including animal strikes."
+      },
+      {
+        "coverageId": "glass",
+        "description": "Synthetic training wording for repair and replacement of vehicle glass."
+      }
+    ],
+    "exclusions": [
+      "Commercial ride-share or delivery use without the relevant endorsement.",
+      "Racing, intentional damage, wear and tear, mechanical or electrical breakdown, and freezing."
+    ],
+    "sourceDocumentRefs": [
+      "data/policies/demo-auto-policy.md"
+    ]
+  },
+  "workflow": {
+    "assessment": {
+      "assessmentId": "asm-demo-002",
+      "claimId": "clm-demo-002",
+      "generatedAt": "2026-10-20T17:08:39.863234Z",
+      "summary": "2 deterministic review flag(s) require attention. Relevant policy wording is evidence for handler review, not a coverage decision.",
+      "completenessFindings": [
+        {
+          "findingCode": "driver_not_listed",
+          "status": "needs_review",
+          "description": "The reporting driver is not listed in the synthetic policy fixture.",
+          "relatedArtifactIds": []
+        },
+        {
+          "findingCode": "repair_estimate_above_review_threshold",
+          "status": "needs_review",
+          "description": "The estimate exceeds the synthetic USD 5,000 handler-review threshold. This is not a coverage rule.",
+          "relatedArtifactIds": [
+            "art-demo-estimate-002",
+            "art-demo-photo-002"
+          ]
+        }
+      ],
+      "conflicts": [],
+      "policyBasis": "grounded",
+      "policyCitations": [
+        {
+          "citationId": "cit-demo-auto-5-0",
+          "policyId": "pol-demo-auto",
+          "sourceDocument": "data/policies/demo-auto-policy.md",
+          "section": "Section 4 \u2014 Claims process",
+          "quotedText": "1. Report a claim within 30 days; theft or vandalism requires a police report and report number.\n2. Provide the date, time, location, and description of the incident.\n3. Provide photographs of damage and other-party details when applicable.\n4. Obtain a repair estimate from an approved shop. The deductible is subtracted from any covered amount.\n\nThis policy text is provided only to test retrieval and citation handling. The demo must not determine coverage or make a claim decision."
+        }
+      ],
+      "recommendedActions": [
+        {
+          "actionId": "act-review-1",
+          "actionType": "verify_driver_listing",
+          "priority": "normal",
+          "rationale": "Have a handler verify the driver information against the complete policy record.",
+          "supportingCitationIds": [
+            "cit-demo-auto-5-0"
+          ],
+          "humanReviewRequired": true
+        },
+        {
+          "actionId": "act-review-2",
+          "actionType": "review_repair_estimate",
+          "priority": "normal",
+          "rationale": "Route the estimate for handler review; the configured threshold is demo-only.",
+          "supportingCitationIds": [
+            "cit-demo-auto-5-0"
+          ],
+          "humanReviewRequired": true
+        }
+      ],
+      "triageRecommendation": "human_review",
+      "humanReviewRequired": true,
+      "imageAnalysis": {
+        "status": "completed",
+        "artifactIds": [
+          "art-demo-photo-002"
+        ],
+        "inputSha256": "bbb50749387011aa3b88489e17457923b03247e099cc17918a04dfd69189f0ab",
+        "model": "gpt-6-luna",
+        "modelVersion": "2026-09-22",
+        "deployment": "claims-vision",
+        "promptVersion": "damage-observations-v1",
+        "observations": {
+          "visibility": "clear",
+          "parts": [
+            {
+              "part": "Front bumper cover",
+              "damage": "Extensive dark scuffing and scrape marks across the painted area below the headlamp, with several areas that appear gouged or marked by paint transfer.",
+              "severity": "moderate"
+            }
+          ],
+          "statementComparison": "The image shows visible damage to the front bumper cover. This is broadly consistent with the unverified statement mentioning a collision, but the image does not verify how or when the damage occurred. The attached estimate cannot be assessed from the visible image.",
+          "limitations": [
+            "Only the visible exterior in this image was assessed; obscured areas and hidden damage are not evaluated.",
+            "The apparent extent and severity may be affected by image quality, lighting, and viewing angle.",
+            "A human reviewer should verify these observations."
+          ]
+        },
+        "limitation": null,
+        "humanReviewRequired": true
+      }
+    },
+    "recommendation": {
+      "claimId": "clm-demo-002",
+      "summary": "The claim involves a collision with a repair estimate of $7,200. The image analysis shows moderate visible damage to the front bumper cover consistent with the claimant's statement. However, the reporting driver is not listed in the policy, and the repair estimate exceeds the review threshold of $5,000. The image analysis is complete but limited to visible exterior damage only. These factors require human review for verification and further assessment.",
+      "triageRecommendation": "human_review",
+      "recommendedActions": [
+        "Verify the reporting driver against the complete policy record to confirm eligibility.",
+        "Route the repair estimate for detailed handler review due to exceeding the threshold.",
+        "Have a human reviewer verify the image damage observations and consider potential hidden damage."
+      ],
+      "supportingArtifactIds": [
+        "art-demo-estimate-002",
+        "art-demo-photo-002"
+      ],
+      "supportingCitationIds": [
+        "cit-demo-auto-5-0"
+      ],
+      "humanReviewRequired": true
+    },
+    "agentName": "claim-assessor",
+    "agentVersion": "3",
+    "responseId": "resp_05f3fc81efaa9f10006ad7a015866c8193aba298be5b73ebd5"
+  },
+  "photos": [
+    {
+      "artifactId": "art-demo-photo-002",
+      "path": "data/claim-packets/evidence/clm-demo-002-art-demo-photo-002.png",
+      "sha256": "bbb50749387011aa3b88489e17457923b03247e099cc17918a04dfd69189f0ab"
+    }
+  ]
+}

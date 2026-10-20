@@ -65,6 +65,23 @@ interactive browser sign-in remain unfinished. Do not expose the unauthenticated
 **local-mode** container. See [Azure deployment and bill of materials](docs/azure-deployment.md)
 for evidence and remaining work.
 
+**Supervisor history enhancement (deployed for testing):** a separate Data API
+builder service exposes `get_claim_risk_facts` through a dedicated APIM MCP route.
+Studio ingress uses a subscription key from the dedicated Copilot Studio Risk
+Tools product; APIM uses managed identity to authenticate to DAB.
+It returns synthetic claim frequency, USD amounts and the latest prior submission
+timestamp using a fixed stored procedure, not caller-written SQL. The Studio
+skill remains a manual upload, not a Foundry Toolbox skill. The operator confirmed
+the shared Studio connection works for both demo makers. See the
+[rollout and Studio handoff](docs/azure-deployment.md#supervisor-claim-history-data-api-builder).
+
+**Supervisor packet enhancement:** three frozen claim/evidence/agent-recommendation
+packets are published to Foundry IQ knowledge base `supervisor-claim-packets`,
+containing only `claim-escalation-packets-source`. The existing policy base and
+live history MCP remain separate. See the
+[packet connection and rehearsal guide](data/claim-packets/README.md).
+Lauren's native IQ connection and agent compatibility still require rehearsal.
+
 ## Repository map
 
 - `src/apps/claims-api/` — shared deterministic service, REST API, MCP tools, and local orchestrator.
