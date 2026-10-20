@@ -1,0 +1,163 @@
+{
+  "synthetic": true,
+  "humanReviewRequired": true,
+  "capturedAtUtc": "2026-10-20T17:08:36.841400+00:00",
+  "captureStartedAtUtc": "2026-10-20T17:07:33.496259+00:00",
+  "sourceApi": "https://ca-claims-snlo25badmmpc.livelyfield-abf14243.centralus.azurecontainerapps.io",
+  "claim": {
+    "claimId": "clm-demo-001",
+    "customerId": "cust-demo-one",
+    "policyId": "pol-demo-auto",
+    "vehicleId": "veh-demo-one",
+    "lossDate": "2024-09-12",
+    "reportedDriverId": "drv-demo-one",
+    "claimantStatement": "A deer ran into the side of the vehicle on a rural road. The front passenger door and mirror are damaged.",
+    "artifactIds": [
+      "art-demo-photo-001"
+    ],
+    "repairEstimate": {
+      "amount": 3200.0,
+      "currency": "USD"
+    }
+  },
+  "artifacts": [
+    {
+      "artifactId": "art-demo-photo-001",
+      "claimId": "clm-demo-001",
+      "artifactType": "damage_photo",
+      "receivedAt": "2024-09-15T12:00:00Z",
+      "contentRef": "data/artifacts/images/clm-demo-001/passenger-door.png",
+      "duplicateOfArtifactId": null,
+      "description": "User-provided AI-generated synthetic damage evidence; not a real claimant photograph.",
+      "provenance": "user_provided_ai_generated"
+    }
+  ],
+  "policy": {
+    "policyId": "pol-demo-auto",
+    "insuredCustomerId": "cust-demo-one",
+    "status": "active",
+    "effectiveDate": "2024-03-15",
+    "expirationDate": "2025-03-15",
+    "coveredVehicleIds": [
+      "veh-demo-one"
+    ],
+    "listedDriverIds": [
+      "drv-demo-one"
+    ],
+    "coverages": [
+      {
+        "coverageId": "collision",
+        "description": "Synthetic training wording for collision-related policy retrieval."
+      },
+      {
+        "coverageId": "comprehensive",
+        "description": "Synthetic training wording for non-collision perils, including animal strikes."
+      },
+      {
+        "coverageId": "glass",
+        "description": "Synthetic training wording for repair and replacement of vehicle glass."
+      }
+    ],
+    "exclusions": [
+      "Commercial ride-share or delivery use without the relevant endorsement.",
+      "Racing, intentional damage, wear and tear, mechanical or electrical breakdown, and freezing."
+    ],
+    "sourceDocumentRefs": [
+      "data/policies/demo-auto-policy.md"
+    ]
+  },
+  "workflow": {
+    "assessment": {
+      "assessmentId": "asm-demo-001",
+      "claimId": "clm-demo-001",
+      "generatedAt": "2026-10-20T17:08:23.096554Z",
+      "summary": "No deterministic completeness or relationship flags were raised. Relevant policy wording is evidence for handler review, not a coverage decision.",
+      "completenessFindings": [],
+      "conflicts": [],
+      "policyBasis": "grounded",
+      "policyCitations": [
+        {
+          "citationId": "cit-demo-auto-3-0",
+          "policyId": "pol-demo-auto",
+          "sourceDocument": "data/policies/demo-auto-policy.md",
+          "section": "Section 2.4 \u2014 Glass",
+          "quotedText": "Windshield and window glass repair is described under comprehensive coverage. The source policy states that the deductible is waived for repair and applies to full glass replacement."
+        }
+      ],
+      "recommendedActions": [
+        {
+          "actionId": "act-human-review",
+          "actionType": "route_to_human_adjuster",
+          "priority": "normal",
+          "rationale": "All generated assessments remain subject to handler review.",
+          "supportingCitationIds": [],
+          "humanReviewRequired": true
+        }
+      ],
+      "triageRecommendation": "human_review",
+      "humanReviewRequired": true,
+      "imageAnalysis": {
+        "status": "completed",
+        "artifactIds": [
+          "art-demo-photo-001"
+        ],
+        "inputSha256": "6a8cd0970703659793645a3bdf316af61f09d03e77631ef9adc72c3ff8acc634",
+        "model": "gpt-6-luna",
+        "modelVersion": "2026-09-22",
+        "deployment": "claims-vision",
+        "promptVersion": "damage-observations-v1",
+        "observations": {
+          "visibility": "clear",
+          "parts": [
+            {
+              "part": "Front passenger door",
+              "damage": "Multiple long, prominent scratches and scuff marks across the exterior panel.",
+              "severity": "moderate"
+            },
+            {
+              "part": "Passenger-side mirror",
+              "damage": "The mirror cap or outer housing appears missing or damaged, with internal components exposed. The image does not establish whether the entire mirror assembly is damaged.",
+              "severity": "moderate"
+            }
+          ],
+          "statementComparison": "The visible door and mirror-area damage is consistent with the parts named in the unverified claim statement. The image does not verify how or when the damage occurred, including the reported deer incident.",
+          "limitations": [
+            "These are visual observations only; reflections and image quality may affect how marks and components appear.",
+            "No conclusions are made about hidden damage, cause, timing, safety, coverage, or repair cost.",
+            "A human should verify these observations and the condition of the vehicle in person."
+          ]
+        },
+        "limitation": null,
+        "humanReviewRequired": true
+      }
+    },
+    "recommendation": {
+      "claimId": "clm-demo-001",
+      "summary": "The image analysis shows moderate visible damage to the front passenger door and passenger-side mirror, consistent with the claimant's statement. The policy citation relates to glass repair coverage but does not determine coverage for this claim. No deterministic completeness or conflict flags were raised. The image analysis is clear but limited to visual observations and does not verify cause, timing, or hidden damage.",
+      "triageRecommendation": "human_review",
+      "recommendedActions": [
+        "Route the claim to a human adjuster for detailed review and verification of the vehicle condition in person.",
+        "Review the policy section cited regarding glass repair for any relevant coverage considerations.",
+        "Verify the claimant's statement and the reported incident details during the human review.",
+        "Assess repair estimates and any additional evidence provided by the claimant or repair shop."
+      ],
+      "supportingArtifactIds": [
+        "art-demo-photo-001"
+      ],
+      "supportingCitationIds": [
+        "cit-demo-auto-3-0"
+      ],
+      "humanReviewRequired": true
+    },
+    "agentName": "claim-assessor",
+    "agentVersion": "3",
+    "responseId": "resp_06f1158af02aebc3006ad7a00392648190bf7fe22d37daeadc"
+  },
+  "photos": [
+    {
+      "artifactId": "art-demo-photo-001",
+      "path": "data/claim-packets/evidence/clm-demo-001-art-demo-photo-001.png",
+      "sha256": "6a8cd0970703659793645a3bdf316af61f09d03e77631ef9adc72c3ff8acc634"
+    }
+  ]
+}

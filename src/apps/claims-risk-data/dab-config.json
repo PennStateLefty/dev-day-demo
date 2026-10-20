@@ -1,0 +1,56 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Azure/data-api-builder/v2.1.5/schemas/dab.draft.schema.json",
+  "data-source": {
+    "database-type": "mssql",
+    "connection-string": "@env('DATABASE_CONNECTION_STRING')"
+  },
+  "runtime": {
+    "rest": { "enabled": false },
+    "graphql": { "enabled": false },
+    "mcp": {
+      "enabled": true,
+      "path": "/mcp",
+      "description": "Read-only synthetic supervisor claim-history facts. Call get_claim_risk_facts with claim_id (lowercase clm- ID, max 100 characters) and as_of (explicit UTC timestamp, e.g. 2026-10-19T00:00:00Z). Never supply SQL or query expressions. Not an underwriting decision service.",
+      "allowed-hosts": ["@env('DAB_HOST')", "@env('APIM_HOST')"],
+      "dml-tools": false
+    },
+    "host": {
+      "mode": "production",
+      "max-response-size-mb": 1,
+      "authentication": {
+        "provider": "EntraID",
+        "jwt": {
+          "audience": "@env('DAB_AUDIENCE')",
+          "issuer": "@env('DAB_ISSUER')"
+        }
+      }
+    }
+  },
+  "entities": {
+    "GetClaimRiskFacts": {
+      "description": "Return frequency (12/24 months), USD amount totals/average/maximum, up to 20 prior claim amounts, and latest prior claim timestamp for the customer linked to a claim. Required arguments: claim_id string (lowercase clm- ID, max 100 characters), as_of UTC timestamp string (e.g. 2026-10-19T00:00:00Z). Window is (as_of minus 24 months, as_of]; current claim excluded. Last prior timestamp uses all earlier history, not only 24 months. Missing customer is an error, not zero claims. Synthetic facts for human supervisor review only.",
+      "source": {
+        "object": "claims.GetClaimRiskFacts",
+        "type": "stored-procedure",
+        "parameters": [
+          {
+            "name": "claim_id",
+            "required": true,
+            "description": "Current synthetic claim ID such as clm-demo-001. Lowercase ASCII letters and digits and hyphens only. At most 100 characters."
+          },
+          {
+            "name": "as_of",
+            "required": true,
+            "description": "Explicit review timestamp in UTC YYYY-MM-DDTHH:MM:SSZ format. Use 2026-10-19T00:00:00Z for the seeded walkthrough."
+          }
+        ]
+      },
+      "rest": { "enabled": false },
+      "graphql": { "enabled": false },
+      "mcp": { "custom-tool": true },
+      "permissions": [
+        { "role": "authenticated", "actions": ["execute"] }
+      ]
+    }
+  }
+}

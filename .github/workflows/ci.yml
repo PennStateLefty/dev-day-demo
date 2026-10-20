@@ -50,6 +50,7 @@ jobs:
               python3 scripts/validation/check_infrastructure.py
             az bicep build --file infrastructure/claims-api.bicep --stdout |
               python3 scripts/validation/check_infrastructure.py --application
+            az bicep build --file infrastructure/claims-risk-data.bicep --stdout > /dev/null
 
   container:
     name: Container image build
@@ -61,3 +62,77 @@ jobs:
         with:
           context: .
           push: false
+      - uses: docker/build-push-action@v6
+        with:
+          context: src/apps/claims-risk-data
+          push: false
+
+  claim-history:
+    name: Claim history SQL acceptance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: '3.12'
+          enable-cache: true
+      - run: uv sync --locked
+      - name: Start disposable SQL Server
+        shell: bash
+        run: |
+          set -euo pipefail
+          export MSSQL_SA_PASSWORD="Aa1!$(openssl rand -hex 24)"
+          echo "::add-mask::$MSSQL_SA_PASSWORD"
+          docker run --detach --name claims-risk-sql \
+            --env ACCEPT_EULA=Y --env MSSQL_SA_PASSWORD \
+            --publish 127.0.0.1:1433:1433 mcr.microsoft.com/mssql/server:2022-latest
+          echo "CLAIMS_RISK_TEST_SQL_CONNECTION_STRING=Server=tcp:127.0.0.1,1433;Database=claims_risk_acceptance;UID=sa;PWD=$MSSQL_SA_PASSWORD;Encrypt=yes;TrustServerCertificate=yes;" >> "$GITHUB_ENV"
+      - name: Initialize disposable acceptance database
+        run: |
+          uv run python - <<'PY'
+          import json
+          import os
+          import time
+          from pathlib import Path
+          import mssql_python
+          from scripts.initialize_sql import migration_batches
+
+          target = os.environ["CLAIMS_RISK_TEST_SQL_CONNECTION_STRING"]
+          master = target.replace("Database=claims_risk_acceptance;", "Database=master;")
+          for attempt in range(60):
+              try:
+                  connection = mssql_python.connect(master, timeout=2, autocommit=True)
+                  break
+              except mssql_python.Error:
+                  if attempt == 59:
+                      raise
+                  time.sleep(2)
+          with connection:
+              connection.cursor().execute("CREATE DATABASE claims_risk_acceptance")
+          with mssql_python.connect(target) as connection:
+              cursor = connection.cursor()
+              for name in (
+                  "001_claims.sql",
+                  "003_claim_history.sql",
+                  "004_claim_history_empty_window.sql",
+              ):
+                  for batch in migration_batches(Path("infrastructure/sql", name).read_text()):
+                      cursor.execute(batch)
+              for claim in json.loads(Path("data/claims/demo-claims.json").read_text()):
+                  cursor.execute(
+                      "INSERT claims.Claim(claim_id, customer_id, payload) VALUES (?, ?, ?)",
+                      (claim["claimId"], claim.get("customerId"), json.dumps(claim)),
+                  )
+              connection.commit()
+          PY
+      - run: uv run pytest -q src/tests/contract/test_claim_history_sql.py
+        env:
+          CLAIMS_RISK_TEST_DISPOSABLE: 'true'
+      - name: Diagnose disposable SQL Server failure
+        if: failure()
+        run: |
+          docker inspect --format '{{json .State}}' claims-risk-sql
+          docker logs --tail 100 claims-risk-sql
+      - name: Remove disposable SQL Server
+        if: always()
+        run: docker rm --force claims-risk-sql

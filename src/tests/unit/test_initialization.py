@@ -54,7 +54,7 @@ def test_initial_sql_seed_commits_in_relational_dependency_order() -> None:
     cursor = connection.cursor.return_value
     cursor.fetchall.return_value = []
     result = initialize(lambda: connection, "00000000-0000-0000-0000-000000000001", DemoService())
-    assert result == {"passed": True, "migrations_applied": 3, "records_inserted": 9}
+    assert result == {"passed": True, "migrations_applied": 5, "records_inserted": 9}
     calls = [call.args[0] for call in cursor.execute.call_args_list]
     policy = next(i for i, sql in enumerate(calls) if sql.startswith("INSERT claims.Policy"))
     claim = next(i for i, sql in enumerate(calls) if sql.startswith("INSERT claims.Claim"))

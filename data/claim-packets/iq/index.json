@@ -1,0 +1,24 @@
+{
+  "name": "claim-escalation-packets",
+  "fields": [
+    {"name": "packet_id", "type": "Edm.String", "key": true, "retrievable": true},
+    {"name": "claim_id", "type": "Edm.String", "filterable": true, "retrievable": true},
+    {"name": "title", "type": "Edm.String", "searchable": true, "retrievable": true},
+    {"name": "content", "type": "Edm.String", "searchable": true, "retrievable": true},
+    {"name": "source_document", "type": "Edm.String", "retrievable": true},
+    {"name": "captured_at_utc", "type": "Edm.String", "retrievable": true},
+    {"name": "snapshot_sha256", "type": "Edm.String", "retrievable": true},
+    {"name": "packet_sha256", "type": "Edm.String", "retrievable": true}
+  ],
+  "semantic": {
+    "defaultConfiguration": "packet-semantic",
+    "configurations": [{
+      "name": "packet-semantic",
+      "prioritizedFields": {
+        "titleField": {"fieldName": "title"},
+        "prioritizedContentFields": [{"fieldName": "content"}],
+        "prioritizedKeywordsFields": [{"fieldName": "claim_id"}]
+      }
+    }]
+  }
+}

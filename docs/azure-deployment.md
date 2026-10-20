@@ -1,5 +1,255 @@
 # Azure deployment and bill of materials
 
+## Supervisor escalation packets: Foundry IQ
+
+Published October 20 to the existing Search service:
+<https://srch-claims-snlo25badmmpc-basic.search.windows.net>.
+Knowledge base `supervisor-claim-packets` contains exactly one source,
+`claim-escalation-packets-source`, backed by index `claim-escalation-packets`.
+It contains three frozen packets: `clm-demo-001`, `clm-demo-002`, `clm-demo-004`.
+No infrastructure, agents, model deployments, role assignments, or authentication
+settings were changed. The existing policy index/source/base are unchanged.
+
+Each packet contains the actual captured submission, evidence inventory and
+image observations, verbatim upstream recommendation, caveats and provenance.
+IQ indexes text, not the embedded original photos. Document paths are repository
+references, not hosted download links. All recommendations require human review;
+the captured policy periods are historical, not current coverage evidence.
+
+Filtered and unfiltered natural-language retrieval returned only the matching
+claim and its complete packet text for each of the three IDs. Missing claim
+`clm-demo-003` returned no references in both modes. Existing policy retrieval
+still succeeds. These are Search API checks, not proof of a Studio connection.
+
+For the native IQ connector, use **Microsoft Entra ID Integrated**, the Search
+endpoint above, and select `supervisor-claim-packets`. Search API-key authentication
+remains disabled; the history MCP's APIM key is unrelated. The documented Studio
+connector requires the GitHub Copilot harness and allows one IQ connection per
+agent. Lauren's connector availability and signed-in identity access are not yet
+verified. Keep the working shared history MCP connection for live risk facts.
+
+The [packet guide](../data/claim-packets/README.md) includes Studio instructions,
+source limitations and rehearsal prompts. Reproduce the deployment with:
+
+```bash
+uv run python scripts/initialize_claim_packets.py \
+  --endpoint https://srch-claims-snlo25badmmpc-basic.search.windows.net --apply
+uv run python scripts/initialize_claim_packets.py \
+  --endpoint https://srch-claims-snlo25badmmpc-basic.search.windows.net --verify
+```
+
+The initializer creates missing objects/documents only and refuses drift rather
+than overwriting an existing packet or knowledge definition.
+
+## Supervisor claim history: Data API builder
+
+The claim-history CI job uses an ephemeral SQL Server 2022 container on the
+GitHub-hosted Ubuntu runner, not the deployed Azure database. It binds to IPv4
+loopback and connects explicitly to `tcp:127.0.0.1,1433`, using the same generated,
+masked password for the container and Python driver. On failure it emits
+container state and recent SQL logs before removing the container.
+
+**Deployed October 19; shared Studio connection confirmed working by the operator.** This enhancement
+does not change existing claims API, Foundry agent, or Toolbox routes.
+
+MCP endpoint for Studio:
+<https://apim-claims-snlo25badmmpc.azure-api.net/claims-risk-tools/mcp>.
+Direct backend:
+<https://ca-claims-risk-snlo25badmmpc.livelyfield-abf14243.centralus.azurecontainerapps.io/mcp>.
+
+Live acceptance passed on both endpoints: initialize, discovery with both
+required string arguments, expected frequency/amount/timestamp facts, empty
+window, six invalid-argument scenarios, and token denials. APIM now requires a
+subscription key and authenticates to DAB with its system-assigned managed
+identity; Studio does not supply a bearer token. DAB permits anonymous protocol/schema discovery but
+returns `PermissionDenied` for anonymous execution. Invalid tokens and tokens
+for unrelated audiences are rejected by DAB. No anonymous claim data is returned.
+The dedicated SQL user has EXECUTE and VIEW DEFINITION on the procedure;
+effective SELECT permissions on Claim and ClaimHistory are both zero.
+
+The Container App is healthy on DAB 2.1.5. ACR build `cjj` produced the deployed
+image digest
+`sha256:cec46e75b273ad569fa43b59c055caf082c7ed32efe6571310e5f95bbbd236b8`.
+Migrations 003 and 004 are applied, with 13 history rows and no original JSON seed
+changes. SQL acceptance: 10 passed; the disposable-only mutation test was skipped
+against the shared demo. Initial live checks caught an empty-window JSON `null`
+and incorrect `/health` probes; migration 004 fixes empty details to `[]`, and
+platform probes use DAB's public process-health `/` endpoint. Detailed `/health`
+remains protected; a healthy root alone is not proof of database access.
+
+The October 19 Studio ingress update uses an APIM-only incremental deployment
+(`claims-risk-studio-key-20261019`) of `infrastructure/claims-risk-apim.bicep`.
+This module is also used by the full app template, so future app deployments
+retain the product, subscription requirement, and managed-identity policy.
+For gateway-only changes, supply `gatewayName`, the existing DAB HTTPS origin as
+`backendUrl`, and the existing Entra API application ID as `apiAudience`; do not
+redeploy the Container App or rerun SQL initialization. Native MCP product
+membership must be queried with API version `2025-09-01-preview`; the older
+`az apim product api list` API can omit MCP entries.
+
+The native DAB MCP server exposes one purpose-built tool,
+`get_claim_risk_facts`, for all three supervisor signals in one response.
+`infrastructure/sql/003_claim_history.sql` adds `claims.ClaimHistory`, 13 synthetic
+submissions for the two identified demo customers, and `claims.GetClaimRiskFacts`.
+`004_claim_history_empty_window.sql` preserves the procedure contract while
+ensuring empty detail windows consistently return JSON `[]`.
+Twelve amounts are under USD 2,000; one is USD 32,000. One older record exercises
+the difference between lifetime history and a 24-month window.
+
+Arguments are exactly `claim_id` and `as_of`. The latter must be an explicit
+`YYYY-MM-DDTHH:MM:SSZ` UTC timestamp. The procedure resolves the customer from the
+current claim; it does not accept a customer ID, SQL, identifiers, filters,
+sort expressions or a caller-selected window. Invalid IDs/timestamps, unknown
+claims and missing customer identity raise errors. Parameter binding prevents
+SQL injection; validation rejects malformed values rather than attempting to
+sanitize them into a different query.
+
+Counts cover 12 and 24 months before the review timestamp, excluding the lower
+boundary and including the upper boundary. Amount aggregates cover all matching
+24-month submissions. Individual amounts are returned in
+`recent_claim_amounts_json`, newest first, limited to 20; `history_truncated`
+explicitly marks omitted detail without truncating aggregates. Latest prior
+submission uses all earlier history, even outside the window. Null maximum,
+average or latest timestamp means no matching observation, not zero dollars.
+Current claim IDs are excluded from history. No loss-date or repair-estimate
+interpretation is involved, and no rates, eligibility, renewal or coverage
+decisions are produced.
+
+For `clm-demo-001` (also `clm-demo-002`) at `2026-10-19T00:00:00Z`, expected facts
+are 4 claims in 12 months, 8 in 24 months, USD 40,450 total, USD 5,056.25 average,
+USD 32,000 maximum and latest prior submission `2026-10-01T17:00:00Z`.
+`clm-demo-004` has 4 submissions in 24 months with USD 1,450 maximum.
+`clm-demo-003` has no customer identity and must fail explicitly.
+These timestamps represent a new supervisor-review scenario; the existing
+2024 intake loss dates and old Foundry consistency fixtures are unchanged.
+
+### Packaging and staged rollout
+
+1. Select the existing demo subscription, resource group and location with the
+   operator before any deployment. Reuse its Container Apps environment, ACR,
+   SQL database and APIM; do not reprovision the foundation.
+2. Build `src/apps/claims-risk-data/Dockerfile` with that directory as the build
+   context and publish the reviewed image to the existing ACR. The base is pinned
+   to Microsoft DAB `2.1.5-nonroot`; configure the resulting immutable image
+   reference as `imageName`. No passwords belong in the image or config.
+3. Deploy `infrastructure/claims-risk-data.bicep` with
+   `provisionApplication=false` (the default). This creates only the dedicated
+   user-assigned identity and its ACR pull grant. Supply existing resource names,
+   SQL hostname/database, API application ID and exact backend access-token issuer.
+4. As the configured Entra SQL administrator, run the existing initializer with
+   `--risk-client-id <riskClientId output>`. Existing `AZURE_SQL_SERVER`,
+   `AZURE_SQL_DATABASE`, and `AZURE_RUNTIME_CLIENT_ID` settings remain required.
+   Migrations and the additional grant commit in the same transaction.
+   Do not edit already-applied migration files. The new seed is migration-owned,
+   so `records_inserted` continues counting the original JSON fixture records,
+   not the 13 new migration-inserted history rows.
+5. Redeploy the same template with `provisionApplication=true`. The separate
+   DAB app uses that identity to access SQL with encryption and no stored SQL
+   credentials. It does not share the broader claims API SQL identity.
+   Its only database permissions are EXECUTE and VIEW DEFINITION on
+   `claims.GetClaimRiskFacts`; ownership chaining supplies underlying reads.
+6. Verify actual MCP initialize/list/call directly and through the output
+   `riskMcpUrl` (`/claims-risk-tools/mcp`), then perform Studio onboarding.
+   Discovery must show only `get_claim_risk_facts`, with required `claim_id`
+   and `as_of` arguments. All generic DML tools, REST and GraphQL are disabled.
+   Check missing/invalid keys at APIM and tokens at DAB, malformed/extra parameters, unknown claim,
+   missing customer, outlier amounts and timestamp boundaries before acceptance.
+
+The new backend independently validates Entra signature, issuer **and audience**;
+anonymous callers receive no tool permission. Only this API uses the dedicated
+`claims-risk-subscription.xml` policy: APIM replaces any inbound Authorization
+header with its managed-identity bearer token for `apiAudience`, strips both
+subscription-key header and query parameter, and forwards without response
+buffering. The `copilot-studio-risk-tools` product contains only this API and
+requires subscriptions; its active standalone subscription is also named
+`copilot-studio-risk-tools`. APIM generates the key pair; the template neither
+sets nor outputs keys. Tracing is disabled for this subscription.
+
+The existing backend API registration permits app-only tokens without requiring
+an app-role assignment; DAB grants its `authenticated` role procedure execution.
+No new app registration or consent is needed. This is not gateway-exclusive
+backend authorization: other valid tokens for the configured issuer/audience
+still work directly. Unlike the older tenant-only claims API, an unrelated
+audience is insufficient for DAB. The template does not alter other API policies.
+Hosts are allowlisted for both the DAB app and
+the APIM gateway to retain DAB's DNS-rebinding protection.
+
+### Copilot Studio handoff and acceptance
+
+Use **Tools > Add a tool > New tool > Model Context Protocol**, enter
+`riskMcpUrl`, and configure **API key > Header**, with header name
+`Ocp-Apim-Subscription-Key`. Use Streamable HTTP, not legacy SSE.
+
+In Azure portal, open **apim-claims-snlo25badmmpc > Subscriptions >
+Copilot Studio Risk Tools Demo**, reveal the primary or secondary key, and put
+it in the Studio connection. Do not put it in skill instructions, source, URLs,
+screenshots, or logs. No Studio OAuth app/callback/consent is needed. The actual
+Studio connection remains operator-owned.
+
+The key authenticates the shared demo connection, not the supervisor. Backend
+calls run as APIM, and SQL access remains the dedicated DAB identity. Regenerate
+keys or suspend the subscription after the demo; keys do not expire
+automatically. Do not use the built-in all-access subscription. Adding more APIs
+to this product would expand the subscription's access.
+
+Manually upload `agents/risk-analyst/copilot-studio/SKILL.md`. This Studio-specific
+skill calls the native DAB tool directly through APIM; the existing
+`agents/risk-analyst/SKILL.md` and Foundry publisher remain intact for the separate
+consistency-review demo. The Studio skill reports facts for human supervision
+and does not recommend pricing, nonrenewal or coverage actions.
+
+Microsoft Learn's custom-tool example warns about empty input schemas. The
+pinned 2.1.5 implementation derives required parameter schemas from SQL metadata
+and supports explicit parameter descriptions; both arguments are also declared
+in this config. Confirm the actual advertised schema during live acceptance
+rather than assuming the documentation example or source alone proves discovery.
+
+Run local configuration/fixture checks with:
+
+```bash
+uv run pytest -q src/tests/unit/test_claim_history.py src/tests/unit/test_initialization.py
+az bicep build --file infrastructure/claims-risk-data.bicep --stdout
+```
+
+After initialization, set `CLAIMS_RISK_TEST_SQL_CONNECTION_STRING` to a
+credential-free Entra connection string for this synthetic database and run
+`uv run python -m pytest -q src/tests/contract/test_claim_history_sql.py`.
+These tests only read the seeded procedure. Without that explicitly selected
+target they skip.
+CI runs them against a disposable SQL Server with a generated ephemeral password,
+including an additional transaction-rolled-back test of the 20-record limit and
+current-claim exclusion enabled only by `CLAIMS_RISK_TEST_DISPOSABLE=true`.
+CI also builds the separate DAB image and compiles its Bicep. Local Docker
+runtime checks require a running Docker daemon.
+
+On Apple Silicon, the SQL driver may require
+`DYLD_LIBRARY_PATH=/opt/homebrew/opt/openssl@3/lib` for the installed Homebrew
+OpenSSL. Run tests with `uv run python -m pytest` rather than the pytest launcher
+so the library path reaches Python. Do not disable certificate verification.
+
+Repeat direct/APIM MCP acceptance with the authenticated Azure CLI account:
+
+```bash
+uv run python scripts/validation/risk_mcp_smoke.py \
+  --audience dbd42526-ef69-4002-ab7b-f8b2a994637c \
+  --url https://ca-claims-risk-snlo25badmmpc.livelyfield-abf14243.centralus.azurecontainerapps.io/mcp \
+  --apim-url https://apim-claims-snlo25badmmpc.azure-api.net/claims-risk-tools/mcp \
+  --apim-subscription-resource-id /subscriptions/987a5b92-2573-4981-a76c-bbd7756592c8/resourceGroups/rg-claims-claims-demo-snlo25/providers/Microsoft.ApiManagement/service/apim-claims-snlo25badmmpc/subscriptions/copilot-studio-risk-tools
+```
+
+The smoke runner acquires tokens and the approved APIM subscription key in memory
+using the Azure CLI account's ARM `listSecrets` permission, and prints no credentials.
+Gateway checks deny absent/invalid keys (including bearer-only requests), then
+exercise discovery and calls with a valid key and deliberately invalid caller
+bearer to prove the gateway replaces caller credentials. Native
+DAB results use MCP text JSON with `status: success` and the row at
+`value.value[0]`; `recent_claim_amounts_json` is itself a JSON array string.
+
+References: [DAB custom stored-procedure MCP tools](https://learn.microsoft.com/azure/data-api-builder/mcp/how-to-configure-custom-tools),
+[DAB runtime configuration](https://learn.microsoft.com/azure/data-api-builder/configuration/runtime),
+[APIM existing MCP proxy](https://learn.microsoft.com/azure/api-management/expose-existing-mcp-server),
+[Studio MCP onboarding](https://learn.microsoft.com/microsoft-copilot-studio/mcp-add-existing-server-to-agent).
+
 ## Current status
 
 **Demo AI content capture, October 18:** the operator approved recording synthetic

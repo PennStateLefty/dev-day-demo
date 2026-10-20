@@ -1,0 +1,13 @@
+{
+  "name": "supervisor-claim-packets",
+  "description": "Synthetic claim escalation packets only. Match the exact claim ID; never combine different claim packets. Preserve source caveats, original statements and prior agent recommendations as distinct evidence. Query the separate live claim-history tool for historical facts. All outputs require human review; no claim, coverage, pricing or nonrenewal decisions.",
+  "knowledgeSources": [{"name": "claim-escalation-packets-source"}],
+  "models": [{
+    "kind": "azureOpenAI",
+    "azureOpenAIParameters": {
+      "resourceUri": "https://aif-claims-snlo25badmmpc.openai.azure.com",
+      "deploymentId": "claims-chat",
+      "modelName": "gpt-4.1-mini"
+    }
+  }]
+}

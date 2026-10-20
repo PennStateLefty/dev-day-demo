@@ -14,6 +14,16 @@ This is an initial contract for the demonstration, not an insurance standard or 
 - **Recommended action** is a bounded next step such as requesting information or routing for human review; it is not a coverage decision.
 - **Claim assessment** contains summary, completeness findings, conflicts, citation state and citations, next actions, and a human-review requirement. A grounded assessment must have at least one policy citation; an unavailable or unassessed policy source must not support a policy conclusion.
 - **Customer response draft** references the assessment and is explicitly a draft requiring human review.
+- **Claim history** is a separate relational synthetic submission ledger under
+  `claims.ClaimHistory`, linked to current claims by `customer_id`. Each row has a
+  unique historical claim ID, UTC submission timestamp, nonnegative USD claimed
+  amount and an enforced synthetic-data marker. Amounts are not payments or
+  repair estimates. Current intake claims are not copied into this ledger.
+  `claims.GetClaimRiskFacts` resolves the customer from one current claim, then
+  returns 12/24-month counts, 24-month amount aggregates, up to 20 recent detail
+  records, and the latest prior timestamp across all supplied history. Windows
+  exclude their lower bound and include the explicit UTC review timestamp.
+  Missing customer identity is an error, not a zero-history customer.
 
 ## Demonstration conditions
 
