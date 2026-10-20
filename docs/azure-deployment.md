@@ -43,6 +43,12 @@ than overwriting an existing packet or knowledge definition.
 
 ## Supervisor claim history: Data API builder
 
+The claim-history CI job uses an ephemeral SQL Server 2022 container on the
+GitHub-hosted Ubuntu runner, not the deployed Azure database. It binds to IPv4
+loopback and connects explicitly to `tcp:127.0.0.1,1433`, using the same generated,
+masked password for the container and Python driver. On failure it emits
+container state and recent SQL logs before removing the container.
+
 **Deployed October 19; shared Studio connection confirmed working by the operator.** This enhancement
 does not change existing claims API, Foundry agent, or Toolbox routes.
 

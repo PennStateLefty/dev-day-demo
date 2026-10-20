@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
+import textwrap
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from decimal import Decimal
@@ -14,6 +16,37 @@ from initialize_sql import initialize, migration_batches, risk_grants
 
 ROOT = Path(__file__).resolve().parents[3]
 SQL = (ROOT / "infrastructure/sql/003_claim_history.sql").read_text()
+
+
+def test_ci_sql_connection_uses_published_address_and_generated_password(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    workflow = (ROOT / ".github/workflows/ci.yml").read_text()
+    start = workflow.split("- name: Start disposable SQL Server\n", 1)[1]
+    script = textwrap.dedent(start.split("run: |\n", 1)[1].split("      - name:", 1)[0])
+    environment_file = tmp_path / "github-env"
+    password_file = tmp_path / "container-password"
+    monkeypatch.setenv("GITHUB_ENV", str(environment_file))
+    monkeypatch.setenv("TEST_SQL_PASSWORD_FILE", str(password_file))
+    subprocess.run(
+        [
+            "bash",
+            "-c",
+            'docker() { printf "%s" "$MSSQL_SA_PASSWORD" > "$TEST_SQL_PASSWORD_FILE"; }\n'
+            + script,
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    name, connection = environment_file.read_text().strip().split("=", 1)
+    fields = dict(field.split("=", 1) for field in connection.split(";") if field)
+    assert name == "CLAIMS_RISK_TEST_SQL_CONNECTION_STRING"
+    assert fields["Server"] == "tcp:127.0.0.1,1433"
+    assert fields["Database"] == "claims_risk_acceptance"
+    assert fields["UID"] == "sa"
+    assert fields["PWD"] == password_file.read_text()
+    assert re.fullmatch(r"Aa1![0-9a-f]{48}", fields["PWD"])
 
 
 def test_seed_has_two_customer_histories_mostly_small_amounts_and_one_outlier() -> None:

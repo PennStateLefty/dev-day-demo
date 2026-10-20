@@ -86,7 +86,7 @@ jobs:
           docker run --detach --name claims-risk-sql \
             --env ACCEPT_EULA=Y --env MSSQL_SA_PASSWORD \
             --publish 127.0.0.1:1433:1433 mcr.microsoft.com/mssql/server:2022-latest
-          echo "CLAIMS_RISK_TEST_SQL_CONNECTION_STRING=Server=127.0.0.1,1433;Database=claims_risk_acceptance;UID=sa;PWD=$MSSQL_SA_PASSWORD;Encrypt=yes;TrustServerCertificate=yes;" >> "$GITHUB_ENV"
+          echo "CLAIMS_RISK_TEST_SQL_CONNECTION_STRING=Server=tcp:127.0.0.1,1433;Database=claims_risk_acceptance;UID=sa;PWD=$MSSQL_SA_PASSWORD;Encrypt=yes;TrustServerCertificate=yes;" >> "$GITHUB_ENV"
       - name: Initialize disposable acceptance database
         run: |
           uv run python - <<'PY'
@@ -128,9 +128,11 @@ jobs:
       - run: uv run pytest -q src/tests/contract/test_claim_history_sql.py
         env:
           CLAIMS_RISK_TEST_DISPOSABLE: 'true'
-      - name: Show SQL Server logs on failure
+      - name: Diagnose disposable SQL Server failure
         if: failure()
-        run: docker logs claims-risk-sql
+        run: |
+          docker inspect --format '{{json .State}}' claims-risk-sql
+          docker logs --tail 100 claims-risk-sql
       - name: Remove disposable SQL Server
         if: always()
         run: docker rm --force claims-risk-sql
