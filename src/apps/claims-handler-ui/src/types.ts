@@ -6,6 +6,8 @@ export interface Claim {
   repairEstimate?: { amount: number; currency: string };
 }
 
+export type CheckStatus = "not_run" | "running" | "complete" | "failed";
+
 export interface Artifact {
   artifactId: string;
   artifactType: string;
